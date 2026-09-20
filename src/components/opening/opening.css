@@ -1,0 +1,175 @@
+/* What is left in CSS after the move to Tailwind: the animation's custom
+   properties (written by opening-stage.jsx), the two-layer mask that
+   clips the photo to the letterforms, and the selectors that reach
+   inside the inlined SVG. All the static layout lives in utilities on the
+   components. The opening unmounts when it finishes, so there are no
+   `body.opening-done` rules here; that class only releases the body
+   scroll-lock, in globals.css. */
+
+.opening {
+  --zoom: 1;
+  --fade: 1;
+  --drift: 0px;
+  /* 1 = solid letterforms, 0 = photo showing through them. */
+  --cover: 1;
+  /* Scale of the photo within the letterforms: small at rest, covering
+     them by the end of the scroll. Must match PHOTO_MIN in
+     opening-stage.jsx - this is the value the first painted frame uses,
+     before any scroll has run render(). */
+  --photo-scale: 0.02;
+  /* 0 = photo confined to the letterforms, 1 = photo is the whole page. */
+  --takeover: 0;
+  /* Vertical nudge keeping the freed photo on the wordmark's centre. */
+  --photo-dy: 0px;
+  /* The photo's own fade-in. Starts at 0: the photo is not visible until
+     the scroll reaches FADE_IN_AT. Defaulting this to 1 flashed the photo
+     at full size and opacity on the first painted frame, before the first
+     scroll ran render(). Reduced motion does not rely on this - it skips
+     the opening entirely and unmounts it. */
+  --photo-in: 0;
+  /* Natural wordmark width, and the size needed to cover the viewport. */
+  --logo-w: min(60vw, calc(60vh * 2.0915));
+  /* Colour of the logo (and the cover behind it) before the reveal.
+     Matches the page background so the hero blends into it. */
+  --logo-solid: #f1efeb;
+  /* Set by the script alongside --zoom; declared so the clip has a sane
+     scale before the first frame runs. */
+  --clip-zoom: 1;
+}
+
+/* The solid letterforms; fade them out to uncover the photo behind. */
+.opening-logo .logo-fill {
+  opacity: var(--cover);
+}
+
+.opening-logo svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Entrance motion lives on wrappers so it can compose with the inline
+   scroll-driven transforms on .opening-zoom and .opening-text. */
+.opening-logo-intro {
+  animation: opening-logo-drop 800ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.opening-text-intro {
+  animation: opening-text-rise 800ms 130ms cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+}
+
+/* This is deliberately separate from the drop-in: the bounce can stop
+   when the scroll-driven logo zoom begins, without resetting its entrance
+   position. */
+.opening-logo-bounce {
+  animation: opening-logo-bounce 1.15s 800ms ease-in-out infinite alternate;
+}
+
+.opening-has-scrolled .opening-logo-bounce {
+  animation: none;
+}
+
+/* Clip layer: masks the photo to the letterforms. Geometry mirrors the
+   SVG, where a 1454x1454 mask is drawn at x=-226,y=-459 inside the
+   1051x503 viewBox. Percentages are pre-computed because CSS positions a
+   mask by the leftover space.
+
+   Two mask layers: the letterforms, plus a flat sheet whose opacity
+   rises with --takeover. Adding them together dissolves the clipping,
+   releasing the photo without ever swapping images. */
+.opening-photo-clip {
+  -webkit-mask-image: url("/logo-mask.png"),
+    linear-gradient(
+      rgba(0, 0, 0, var(--takeover)),
+      rgba(0, 0, 0, var(--takeover))
+    );
+  mask-image: url("/logo-mask.png"),
+    linear-gradient(
+      rgba(0, 0, 0, var(--takeover)),
+      rgba(0, 0, 0, var(--takeover))
+    );
+  -webkit-mask-repeat: no-repeat, repeat;
+  mask-repeat: no-repeat, repeat;
+  -webkit-mask-position: 56.0794% 48.265%, 0 0;
+  mask-position: 56.0794% 48.265%, 0 0;
+  -webkit-mask-size: 138.3444% 289.0656%, 100% 100%;
+  mask-size: 138.3444% 289.0656%, 100% 100%;
+  -webkit-mask-composite: source-over;
+  mask-composite: add;
+}
+
+/* Reduced motion: the stage script bails out before it writes any custom
+   properties, so the chrome must be reset here. These need !important
+   because the transform and opacity are inline styles on the elements,
+   which a class or element rule cannot outrank. */
+@media (prefers-reduced-motion: reduce) {
+  .opening-zoom,
+  .opening-text {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+
+  .opening-logo-intro,
+  .opening-text-intro,
+  .opening-logo-bounce {
+    animation: none;
+  }
+}
+
+@keyframes opening-logo-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-110vh);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes opening-text-rise {
+  from {
+    opacity: 0;
+    transform: translateY(110vh);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes opening-logo-bounce {
+  0%,
+  100% {
+    transform: translateY(5%);
+  }
+ 
+  100% {
+    transform: translateY(0%);
+  }
+}
+
+/* The handover crossfade. The opening fades out while what follows fades
+   in underneath it, both over CROSSFADE_MS in opening-stage.jsx. Kept as
+   keyframes rather than a transition so they start on the frame the two
+   elements mount, with no risk of the initial opacity being skipped.
+   Reduced motion never reaches the handover phase at all (the stage goes
+   straight to done), so these need no reduced-motion override. */
+@keyframes opening-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes opening-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
