@@ -1,6 +1,24 @@
 @import url('https://fonts.cdnfonts.com/css/delirium-ncv');
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'BBH Hegarty';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/fontsource/fonts/bbh-sans-hegarty@5.3.0/latin-400-normal.woff2') format('woff2'),
+       url('https://cdn.jsdelivr.net/fontsource/fonts/bbh-sans-hegarty@5.3.0/latin-400-normal.woff') format('woff');
+}
+
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('https://cdn.jsdelivr.net/fontsource/fonts/bricolage-grotesque@5.3.0/latin-400-normal.woff2') format('woff2'),
+       url('https://cdn.jsdelivr.net/fontsource/fonts/bricolage-grotesque@5.3.0/latin-400-normal.woff') format('woff');
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
