@@ -32,7 +32,7 @@ export default function HomePage() {
         <img 
           src="/mazeaboutus.png" 
           alt="About Us" 
-          className="w-[33rem] h-[33rem] object-contain" 
+          className="w-[25rem] h-[25rem] object-contain" 
         />
           
       </section>
