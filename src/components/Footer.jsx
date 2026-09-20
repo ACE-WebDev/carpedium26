@@ -13,13 +13,13 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="relative w-full bg-[#EDD4A3] px-8 md:px-20 py-16 flex flex-col justify-between">
+    <footer className="relative w-full bg-[#EDD4A3] px-8 md:px-20 py-16 flex flex-col justify-between" style={{ backgroundImage: "url('/footerbg.png')" }}>
       <div>
         {/* Contact us: DELIRIUM NVC, Weight 400, Size 71.19px */}
         <h2 
           className="uppercase mb-8 text-[#283618]"
           style={{
-            fontFamily: "'DELIRIUM NVC', sans-serif",
+            fontFamily: "'DELIRIUM NCV', sans-serif",
             fontWeight: 400,
             fontSize: "71.19px",
             lineHeight: "100%",
@@ -33,7 +33,7 @@ export default function Footer() {
         <h3 
           className="mb-6 text-[#283618]"
           style={{
-            fontFamily: "'Product Sans Medium', sans-serif",
+            fontFamily: "'Google Sans Flex', sans-serif",
             fontWeight: 500,
             fontSize: "29.24px",
             lineHeight: "100%",
@@ -50,7 +50,7 @@ export default function Footer() {
               {/* Sudarsan P: Product Sans Medium, Weight 500, Size 27.97px, Color #602D00 */}
               <span 
                 style={{
-                  fontFamily: "'Product Sans Medium', sans-serif",
+                  fontFamily: "'Google Sans Flex', sans-serif",
                   fontWeight: 500,
                   fontSize: "27.97px",
                   lineHeight: "100%",
@@ -63,7 +63,7 @@ export default function Footer() {
               {/* Phone number: Product Sans Medium, Weight 500, Size 25.42px, Color #602D00 */}
               <span 
                 style={{
-                  fontFamily: "'Product Sans Medium', sans-serif",
+                  fontFamily: "'Google Sans Flex', sans-serif",
                   fontWeight: 500,
                   fontSize: "25.42px",
                   lineHeight: "100%",
