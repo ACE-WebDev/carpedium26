@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400;500;700&display=swap");
+@import url("https://fonts.cdnfonts.com/css/delirium-ncv");
 @import "tailwindcss";
 
 @font-face {
@@ -9,6 +11,7 @@
        url('https://cdn.jsdelivr.net/fontsource/fonts/bbh-sans-hegarty@5.3.0/latin-400-normal.woff') format('woff');
 }
 
+
 @font-face {
   font-family: 'Bricolage Grotesque';
   font-style: normal;
@@ -18,9 +21,22 @@
        url('https://cdn.jsdelivr.net/fontsource/fonts/bricolage-grotesque@5.3.0/latin-400-normal.woff') format('woff');
 }
 
+@font-face {
+  font-family: "Product Sans Medium";
+  src: url("https://fonts.cdnfonts.com/css/delirium-ncv") format("woff2"),
+       url("/fonts/ProductSans-Medium.woff") format("woff");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+}
+
+@theme {
+  --font-delirium: "DELIRIUM NCV", sans-serif;
 }
 
 @theme inline {
