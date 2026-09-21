@@ -1,9 +1,10 @@
 "use client";
-
+import Navbar from "./navbar";
 export default function HomePage() {
   return (
     /* Main wrapper with the base background color */
     <div className="relative w-full bg-[#EDD4A3] flex flex-col">
+      <Navbar/>
 
       <div
         className="relative w-full h-[150vh] bg-top bg-no-repeat bg-cover"
