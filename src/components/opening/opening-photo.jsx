@@ -19,7 +19,7 @@ export default function OpeningPhoto() {
         width:
           "calc(var(--logo-w) + (100vw - var(--logo-w)) * var(--takeover))",
         height:
-          "calc(var(--logo-w) / 2.0915 + (150vh - var(--logo-w) / 2.0915) * var(--takeover))",
+          "calc(var(--logo-w) / var(--logo-ratio) + (150vh - var(--logo-w) / var(--logo-ratio)) * var(--takeover))",
         // The clip hangs off `top: 50%`, so `-50%` keeps it centred on the
         // wordmark. HomePage's hero box instead starts at the top of the
         // page, so as --takeover runs we slide the anchor up to the top of
@@ -35,7 +35,13 @@ export default function OpeningPhoto() {
         className="block h-full w-full origin-center object-cover object-top will-change-[transform,opacity]"
         style={{
           opacity: "var(--photo-in)",
-          transform: "scale(var(--photo-scale))",
+          // translateY before scale, so the nudge is not multiplied by
+          // --photo-scale - which starts at 0.02 and would flatten it to
+          // nothing at the start of the animation. In this order the
+          // offset is a plain percentage of the image's own height and
+          // stays visually constant as the picture grows.
+          transform:
+            "translateY(var(--photo-nudge)) scale(var(--photo-scale))",
         }}
         src="/maze.png"
         alt="Carpe Diem"
