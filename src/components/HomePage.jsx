@@ -48,10 +48,22 @@ export default function HomePage() {
         
         {/* The central About Us Image */}
         <img 
-          src="/mazeaboutus.png" 
+          src="/mazeend.png" 
           alt="About Us" 
           className="w-[25rem] h-[25rem] object-contain" 
         />
+
+        <img
+            src="/aboutustxt.png"
+            alt="Sponsors"
+            className="absolute w-[16.5%] h-auto max-w-none animate-spin motion-reduce:animate-none"
+            style={{
+              left: "42%",
+              top: "30%",
+              transformOrigin: "50.15% 71.28%",
+              animationDuration: "10s",
+            }}
+          />
       </section>
 
       {/* ---- CARPEDIEM 26TH EDITION INTRO SECTION ---- */}
@@ -197,14 +209,41 @@ export default function HomePage() {
           className="block w-full h-auto pointer-events-none select-none"
         />
 
-        <div className="relative w-full aspect-[1000/738] overflow-hidden -mt-[0%] -mb-[13%]">
+        <div className="relative w-full aspect-[1000/738] overflow-hidden -mt-[22%] -mb-[13%]">
           <img
             src="/sponsormaze2.png"
             alt=""
             aria-hidden="true"
-            className="absolute left-0 top-0 w-[130.9%] max-w-none h-auto pointer-events-none select-none"
+            className="absolute -left-[14%] top-0 w-[130.9%] max-w-none h-auto pointer-events-none select-none"
+          />
+
+          <img
+            src="/mazeend.png"
+            alt=""
+            aria-hidden="true"
+            className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 w-[24.9%] h-auto max-w-none pointer-events-none select-none"
+          />
+
+          <img
+            src="/sponsortxt.png"
+            alt="Sponsors"
+            className="absolute w-[16.5%] h-auto max-w-none animate-spin motion-reduce:animate-none"
+            style={{
+              left: "42%",
+              top: "30%",
+              transformOrigin: "50.15% 71.28%",
+              animationDuration: "10s",
+            }}
           />
         </div>
+        
+        {/* sponsorsection: below the ring */}
+        <img
+          src="/sponsorsection.png"
+          alt=""
+          aria-hidden="true"
+          className="relative z-10 block w-[125%] max-w-none -ml-[12%] -mt-[19.3%] aspect-[2500/1448] object-fill pointer-events-none select-none"
+        />
 
         {/* endmaze3 */}
         <img
