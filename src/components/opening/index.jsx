@@ -4,12 +4,31 @@ import path from "node:path";
 import OpeningStage from "./opening-stage";
 import OpeningPhoto from "./opening-photo";
 
-// Inlined rather than served through <img> so the logo's fill can be
-// driven by CSS (it is a masked rect using currentColor).
+// The artwork's own bounding box inside carpediem.svg's 1095-square
+// canvas. The canvas is mostly empty space, so it is cropped to this box
+// on the way in: the box is what --logo-ratio describes and what
+// public/logo-mask.png is rendered to, so the visible wordmark and the
+// mask that clips the photo to it end up the same size and position.
+// Re-measure these (and regenerate the mask) if the artwork changes.
+const LOGO_BOX = "51.3 391.5 1037.2 333.38";
+
+// Inlined rather than served through <img> so the logo's fill and
+// opacity can be driven by CSS (see `.opening-logo path` in opening.css).
 async function loadLogo() {
-  return readFile(
+  const svg = await readFile(
     path.join(process.cwd(), "src/components/opening/carpediem.svg"),
     "utf8",
+  );
+  // Crop to the artwork and drop the intrinsic width/height so the SVG
+  // scales to its container instead of the square canvas's dimensions.
+  // Confined to the root <svg ...> tag so any width/height on the
+  // artwork's own elements is left alone.
+  return svg.replace(
+    /<svg\b[^>]*>/,
+    (tag) =>
+      tag
+        .replace(/viewBox="[^"]*"/, `viewBox="${LOGO_BOX}"`)
+        .replace(/\s(?:width|height)="[^"]*"/g, ""),
   );
 }
 
@@ -32,7 +51,10 @@ export default async function Opening({ children }) {
           <div className="opening-logo-intro">
             <div
               className="opening-zoom relative z-20 flex origin-center items-center justify-center will-change-transform"
-              style={{ transform: "scale(var(--zoom))" }}
+              style={{
+                transform:
+                  "scale(var(--zoom)) translateY(var(--logo-dy))",
+              }}
             >
               <div className="opening-logo-bounce">
                 <div
