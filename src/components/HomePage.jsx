@@ -48,10 +48,22 @@ export default function HomePage() {
         
         {/* The central About Us Image */}
         <img 
-          src="/mazeaboutus.png" 
+          src="/mazeend.png" 
           alt="About Us" 
           className="w-[25rem] h-[25rem] object-contain" 
         />
+
+        <img
+            src="/aboutustxt.png"
+            alt="Sponsors"
+            className="absolute w-[16.5%] h-auto max-w-none animate-spin motion-reduce:animate-none"
+            style={{
+              left: "42%",
+              top: "30%",
+              transformOrigin: "50.15% 71.28%",
+              animationDuration: "10s",
+            }}
+          />
       </section>
 
       {/* ---- CARPEDIEM 26TH EDITION INTRO SECTION ---- */}
@@ -188,9 +200,57 @@ export default function HomePage() {
         
       </section>
 
-      <div className="w-[calc(100%+3rem)]">
+      <div className="relative w-full overflow-hidden">
 
-        {/* endmaze3: cream bar with the tan bottom edge */}
+        <img
+          src="/sponsormaze1.png"
+          alt=""
+          aria-hidden="true"
+          className="block w-full h-auto pointer-events-none select-none"
+        />
+
+        <div className="relative w-full aspect-[1000/738] overflow-hidden -mt-[22%] -mb-[13%]">
+          <img
+            src="/sponsormaze2.png"
+            alt=""
+            aria-hidden="true"
+            className="absolute -left-[14%] top-0 w-[130.9%] max-w-none h-auto pointer-events-none select-none"
+          />
+
+          <img
+            src="/mazeend.png"
+            alt=""
+            aria-hidden="true"
+            className="absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 w-[24.9%] h-auto max-w-none pointer-events-none select-none"
+          />
+
+          <img
+            src="/sponsortxt.png"
+            alt="Sponsors"
+            className="absolute w-[16.5%] h-auto max-w-none animate-spin motion-reduce:animate-none"
+            style={{
+              left: "42%",
+              top: "30%",
+              transformOrigin: "50.15% 71.28%",
+              animationDuration: "10s",
+            }}
+          />
+        </div>
+        
+        {/* heading: sits above the bars, in the normal flow (no overlapping) */}
+        <h2 className="relative z-20 w-[100%] mt-[3%] text-center uppercase leading-none font-normal font-['BBH_Hegarty'] text-[#1C1F2A] text-[clamp(6rem,2.9vw,56px)]">
+          Sponsors
+        </h2>
+
+        {/* sponsorsection: pulled up a bit less than before to make room for the heading */}
+        <img
+          src="/sponsorsection.png"
+          alt=""
+          aria-hidden="true"
+          className="relative z-10 block w-[124%] max-w-none -ml-[12%] -mt-[14.3%] aspect-[1712/1448] object-fill pointer-events-none select-none"
+        />
+
+        {/* endmaze3 */}
         <img
           src="/carpediem-maze-bottom.png"
           alt=""
@@ -198,7 +258,7 @@ export default function HomePage() {
           className="relative z-10 block w-[46%] aspect-[662/96] object-cover object-left pointer-events-none select-none"
         />
 
-        {/* endmaze4: tan top edge, then cream */}
+        {/* endmaze4 */}
         <img
           src="/carpediem-maze-top.png"
           alt=""
@@ -206,7 +266,7 @@ export default function HomePage() {
           className="relative z-10 block w-[46%] aspect-[662/96] object-cover object-left mt-[8%] pointer-events-none select-none"
         />
 
-        {/* your maze: pulled up so the bars sit in its empty top area */}
+        {/* endmaze1 + endmaze2 */}
         <div className="relative w-full -mt-[16.4%] aspect-[1440/1000] overflow-hidden">
           <img
             src="/endmaze1.png"
@@ -221,6 +281,7 @@ export default function HomePage() {
             className="absolute left-0 top-[25.0%] w-[32.92%] h-auto max-w-none pointer-events-none select-none"
           />
         </div>
+
       </div>
     </div>
   );
