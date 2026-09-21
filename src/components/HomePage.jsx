@@ -237,12 +237,17 @@ export default function HomePage() {
           />
         </div>
         
-        {/* sponsorsection: below the ring */}
+        {/* heading: sits above the bars, in the normal flow (no overlapping) */}
+        <h2 className="relative z-20 w-[100%] mt-[3%] text-center uppercase leading-none font-normal font-['BBH_Hegarty'] text-[#1C1F2A] text-[clamp(6rem,2.9vw,56px)]">
+          Sponsors
+        </h2>
+
+        {/* sponsorsection: pulled up a bit less than before to make room for the heading */}
         <img
           src="/sponsorsection.png"
           alt=""
           aria-hidden="true"
-          className="relative z-10 block w-[125%] max-w-none -ml-[12%] -mt-[19.3%] aspect-[2500/1448] object-fill pointer-events-none select-none"
+          className="relative z-10 block w-[124%] max-w-none -ml-[12%] -mt-[14.3%] aspect-[1712/1448] object-fill pointer-events-none select-none"
         />
 
         {/* endmaze3 */}
