@@ -188,8 +188,6 @@ export default function HomePage() {
       </section>
 
       <div className="w-[calc(100%+3rem)]">
-
-        {/* endmaze3: cream bar with the tan bottom edge */}
         <img
           src="/carpediem-maze-bottom.png"
           alt=""
@@ -197,7 +195,6 @@ export default function HomePage() {
           className="relative z-10 block w-[46%] aspect-[662/96] object-cover object-left pointer-events-none select-none"
         />
 
-        {/* endmaze4: tan top edge, then cream */}
         <img
           src="/carpediem-maze-top.png"
           alt=""
@@ -205,7 +202,6 @@ export default function HomePage() {
           className="relative z-10 block w-[46%] aspect-[662/96] object-cover object-left mt-[8%] pointer-events-none select-none"
         />
 
-        {/* your maze: pulled up so the bars sit in its empty top area */}
         <div className="relative w-full -mt-[16.4%] aspect-[1440/1000] overflow-hidden">
           <img
             src="/endmaze1.png"
