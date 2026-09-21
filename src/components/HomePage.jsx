@@ -188,7 +188,25 @@ export default function HomePage() {
         
       </section>
 
-      <div className="w-[calc(100%+3rem)]">
+      <div className="relative w-full overflow-hidden">
+
+        <img
+          src="/sponsormaze1.png"
+          alt=""
+          aria-hidden="true"
+          className="block w-full h-auto pointer-events-none select-none"
+        />
+
+        <div className="relative w-full aspect-[1000/738] overflow-hidden -mt-[0%] -mb-[13%]">
+          <img
+            src="/sponsormaze2.png"
+            alt=""
+            aria-hidden="true"
+            className="absolute left-0 top-0 w-[130.9%] max-w-none h-auto pointer-events-none select-none"
+          />
+        </div>
+
+        {/* endmaze3 */}
         <img
           src="/carpediem-maze-bottom.png"
           alt=""
@@ -196,6 +214,7 @@ export default function HomePage() {
           className="relative z-10 block w-[46%] aspect-[662/96] object-cover object-left pointer-events-none select-none"
         />
 
+        {/* endmaze4 */}
         <img
           src="/carpediem-maze-top.png"
           alt=""
@@ -203,6 +222,7 @@ export default function HomePage() {
           className="relative z-10 block w-[46%] aspect-[662/96] object-cover object-left mt-[8%] pointer-events-none select-none"
         />
 
+        {/* endmaze1 + endmaze2 */}
         <div className="relative w-full -mt-[16.4%] aspect-[1440/1000] overflow-hidden">
           <img
             src="/endmaze1.png"
@@ -217,6 +237,7 @@ export default function HomePage() {
             className="absolute left-0 top-[25.0%] w-[32.92%] h-auto max-w-none pointer-events-none select-none"
           />
         </div>
+
       </div>
     </div>
   );
