@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Navbar from "./navbar";
+import MazeBall from "./MazeBall";
+import CircleWipe from "./CircleWipe";
 
 /* ================= DIGIT REEL (single spinning character) ================= */
 function DigitReel({ digit, spinning }) {
@@ -128,15 +130,23 @@ function FlagshipStats() {
 }
 
 export default function HomePage() {
+  const ballTargetRef = useRef(null);
+  // Everything above the Intro section is dropped once the blackout covers
+  // the screen, so the page really does begin at the Intro afterwards
+  // rather than just being scrolled past the maze.
+  const [introOnly, setIntroOnly] = useState(false);
+  const enterIntro = useCallback(() => setIntroOnly(true), []);
+
   return (
     <div className="relative w-full bg-[#EDD4A3] flex flex-col">
       <Navbar />
 
+      {!introOnly && (
+        <>
       {/* Hero Section */}
-      <div
-        className="relative w-full h-[150vh] bg-top bg-no-repeat bg-cover"
-        style={{ backgroundImage: "url('/maze.png')" }}
-      >
+      <MazeBall
+        heroClassName="h-[150vh]"
+        hero={
         <section className="relative h-screen w-full flex flex-col items-center justify-start pt-32">
           <button
             onClick={() =>
@@ -162,33 +172,44 @@ export default function HomePage() {
             <span className="font-['Archivo_Black'] text-lg font-bold uppercase tracking-wider text-[#1C1E2C]">
               SCROLL DOWN
             </span>
-          </button>
+            </button>
+          </section>
+        }
+      >
+        {/* About Us Section — inside MazeBall so the ball can roll from the
+            hero down into it; `data-ball-target` marks where it comes to rest. */}
+        <section id="about-us" className="relative w-full flex items-center justify-center py-24">
+          <Image
+            src="/mazeend.png"
+            alt="About Us"
+            width={400}
+            height={400}
+            data-ball-target=""
+            ref={ballTargetRef}
+            className="w-[25rem] h-[25rem] object-contain"
+          />
+          <Image
+            src="/aboutustxt.png"
+            alt="Sponsors Text"
+            width={300}
+            height={300}
+            className="absolute w-[16.5%] h-auto max-w-none animate-spin motion-reduce:animate-none"
+            style={{
+              left: "42%",
+              top: "30%",
+              transformOrigin: "50.15% 71.28%",
+              animationDuration: "10s",
+            }}
+          />
         </section>
-      </div>
+      </MazeBall>
+        </>
+      )}
 
-      {/* About Us Section */}
-      <section id="about-us" className="relative w-full flex items-center justify-center py-24">
-        <Image
-          src="/mazeend.png"
-          alt="About Us"
-          width={400}
-          height={400}
-          className="w-[25rem] h-[25rem] object-contain"
-        />
-        <Image
-          src="/aboutustxt.png"
-          alt="Sponsors Text"
-          width={300}
-          height={300}
-          className="absolute w-[16.5%] h-auto max-w-none animate-spin motion-reduce:animate-none"
-          style={{
-            left: "42%",
-            top: "30%",
-            transformOrigin: "50.15% 71.28%",
-            animationDuration: "10s",
-          }}
-        />
-      </section>
+      {/* Outside the block above on purpose: it unmounts that content
+          mid-transition, so it must not be a child of it or it would tear
+          itself down before the circle could shrink back. */}
+      <CircleWipe originRef={ballTargetRef} onCovered={enterIntro} />
 
       {/* Intro Section */}
       <section
