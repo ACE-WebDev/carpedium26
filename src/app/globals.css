@@ -15,6 +15,7 @@
     url("https://cdn.jsdelivr.net/fontsource/fonts/bbh-sans-hegarty@5.3.0/latin-400-normal.woff")
       format("woff");
 }
+
 @font-face {
   font-family: 'Gagalin';
   src: url('/fonts/Gagalin-Regular.woff2') format('woff2'),
