@@ -200,6 +200,151 @@ export default function HomePage() {
         
       </section>
 
+      {/* ================= FLAGSHIP EVENT ================= */}
+      <section
+        id="flagship-event"
+        className="relative w-full bg-[#EDD4A3] pt-8 px-6 text-center overflow-hidden"
+      >
+        {/* ================= DIAGONAL MAZE ================= */}
+        <div
+          className="
+            absolute
+            right-[-10%]
+            top-[3%]
+            w-[34%]
+            pointer-events-none
+            select-none
+            z-0
+          "
+          aria-hidden="true"
+        >
+          {/* TOP SLANTED MAZE */}
+          <img
+            src="/capediem-maze-slanted.png"
+            alt=""
+            className="
+              block
+              w-full
+              h-auto
+              object-contain
+              pointer-events-none
+              select-none
+            "
+          />
+
+          {/* BOTTOM SLANTED MAZE */}
+          <img
+            src="/capediem-maze-slanted-bottom.png"
+            alt=""
+            className="
+              block
+              w-[90%]
+              h-auto
+              object-contain
+              ml-auto
+              mr-[-5%]
+              mt-[-10%]
+              pointer-events-none
+              select-none
+            "
+          />
+        </div>
+
+        {/* ================= FLAGSHIP HEADING ================= */}
+        <img
+          src="/flagship-heading.png"
+          alt="Our Flagship Event"
+          className="
+            relative
+            z-10
+            mx-auto
+            w-[100%]
+            max-w-[1040px]
+            h-auto
+            object-contain
+          "
+        />
+
+        {/* ================= FLAGSHIP DESCRIPTION ================= */}
+        <p
+          className="
+            relative
+            z-10
+            mx-auto
+            max-w-[1150px]
+            mt-35
+            px-4
+          "
+          style={{
+            fontFamily: "'Bricolage Grotesque', sans-serif",
+            fontWeight: 400,
+            fontSize: "clamp(1rem, 2.5vw, 36px)",
+            lineHeight: 1.2,
+            letterSpacing: "0%",
+            textAlign: "center",
+            color: "#000000",
+          }}
+        >
+          The highlight, as always, is the Flagship event Mr./Ms. Freshers –
+          the crown of this two-day extravaganza! Mark your calendars for the
+          4th &amp; 5th of October – SASTRA awaits you for an endless flow of
+          fun and celebration!
+        </p>
+
+        {/* ================= GRASS + GREEN PLATFORM ================= */}
+        <div className="relative w-screen left-1/2 -translate-x-1/2 mt-[4vw]">
+          {/* Grass */}
+          <img
+            src="/carpediem-grass-row.png"
+            alt=""
+            aria-hidden="true"
+            className="
+              relative
+              z-0
+              block
+              w-full
+              h-auto
+              object-contain
+              pointer-events-none
+              select-none
+            "
+          />
+
+          {/* Green platform */}
+          <div className="relative z-10 w-full -mt-[10.2083%]">
+            <img
+              src="/flagship-wave.png"
+              alt=""
+              aria-hidden="true"
+              className="
+                block
+                w-full
+                h-auto
+                object-cover
+                pointer-events-none
+                select-none
+              "
+            />
+
+            {/* Stats */}
+            <img
+              src="/flagship-stats.png"
+              alt="1 Days, 11+ Events, 22+ Sponsors"
+              className="
+                absolute
+                left-1/2
+                -translate-x-1/2
+                top-[32.5%]
+                w-[85%]
+                max-w-[1224px]
+                h-auto
+                object-contain
+              "
+            />
+          </div>
+        </div>
+      </section>
+
       <div className="relative w-full overflow-hidden">
 
         <img
