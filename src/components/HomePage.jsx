@@ -6,7 +6,6 @@ import Navbar from "./navbar";
 import MazeBall from "./MazeBall";
 import CircleWipe from "./CircleWipe";
 
-
 /* ================= DIGIT REEL (single spinning character) ================= */
 function DigitReel({ digit, spinning }) {
   const reelDigits = "0123456789";
@@ -105,10 +104,9 @@ function FlagshipStats() {
       {stats.map((s) => (
         <div key={s.label} className="flex flex-col items-center text-center">
           <span
-            className="text-[#283618] flex items-center justify-center"
+            className="text-[#283618] flex items-center justify-center text-[14vw] md:text-[clamp(3.5rem,10.5vw,150px)]"
             style={{
               fontFamily: "'BBH Hegarty', sans-serif",
-              fontSize: "clamp(3.5rem, 10.5vw, 150px)",
               lineHeight: 0.9,
               fontWeight: 700,
             }}
@@ -116,10 +114,9 @@ function FlagshipStats() {
             <StatNumber value={s.value} spinning={spinning} />
           </span>
           <span
-            className="text-[#FDF7DE] mt-1"
+            className="text-[#FDF7DE] mt-1 text-[6.75vw] md:text-[clamp(1.6rem,5vw,70px)]"
             style={{
               fontFamily: "'BBH Hegarty', sans-serif",
-              fontSize: "clamp(1.6rem, 5vw, 70px)",
               lineHeight: 1,
             }}
           >
@@ -131,26 +128,79 @@ function FlagshipStats() {
   );
 }
 
-/* ================= PERFORMER FAN (3 cards on hover) ================= */
+/* ================= PERFORMER FAN =================
+   Desktop (mouse): 3 cards fan out on hover.
+   Mobile (touch):  the stack fans out into 3 cards automatically,
+                    3 seconds after it scrolls into view. */
 const FAN_IMAGES = {
   left: "/performer-1.png",   // swap in different photos if you have them
   center: "/performer-1.png",
   right: "/performer-1.png",
 };
 
+const MOBILE_DELAY_MS = 1000;
+
 function PerformerFan({ images = FAN_IMAGES }) {
   const [open, setOpen] = useState(false);
+  const [isTouch, setIsTouch] = useState(false);
+  const ref = useRef(null);
 
+  // Phone-sized screens OR devices with no real hover (so it also works in a
+  // resized desktop browser window, not only in touch emulation)
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px), (hover: none)");
+    const update = () => setIsTouch(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  // Touch only: open 3s after the fan is on screen, close again when it leaves
+  useEffect(() => {
+    if (!isTouch) return;
+    const el = ref.current;
+    if (!el) return;
+
+    let timer;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        clearTimeout(timer);
+        if (entry.isIntersecting) {
+          timer = setTimeout(() => setOpen(true), MOBILE_DELAY_MS);
+        } else {
+          setOpen(false);
+        }
+      },
+      { threshold: 0.5 }
+    );
+
+    observer.observe(el);
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [isTouch]);
+
+  const spread = isTouch ? 40 : 68;
+  const rot = isTouch ? 12 : 20; // tighter fan on phones so it stays on screen // % sideways offset of the side cards
   const ease = "transform 500ms cubic-bezier(0.22, 1, 0.36, 1)";
   const cardClass =
     "absolute inset-0 h-full w-full object-cover pointer-events-none select-none motion-reduce:!transition-none";
 
   return (
     <div
+      ref={ref}
       className="relative z-10 cursor-pointer"
-      style={{ width: "min(30vw, 512px)", aspectRatio: "512 / 718" }}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
+      // slightly narrower on phones so the fanned-out cards stay on screen
+      style={{
+        width: isTouch ? "min(62vw, 300px)" : "min(30vw, 512px)",
+        aspectRatio: "512 / 718",
+        // phones: big when closed, shrinks a little when fanned so all 3 fit
+        transform: isTouch && open ? "scale(0.74)" : "none",
+        transition: "transform 500ms cubic-bezier(0.22, 1, 0.36, 1)",
+      }}
+      onMouseEnter={() => !isTouch && setOpen(true)}
+      onMouseLeave={() => !isTouch && setOpen(false)}
     >
       {/* Left card */}
       <Image
@@ -162,7 +212,7 @@ function PerformerFan({ images = FAN_IMAGES }) {
         style={{
           transition: ease,
           transform: open
-            ? "translateX(-68%) translateY(3%) rotate(-20deg)"
+            ? `translateX(-${spread}%) translateY(3%) rotate(-${rot}deg)`
             : "translateX(0) translateY(0) rotate(0deg)",
         }}
       />
@@ -177,7 +227,7 @@ function PerformerFan({ images = FAN_IMAGES }) {
         style={{
           transition: ease,
           transform: open
-            ? "translateX(68%) translateY(3%) rotate(20deg)"
+            ? `translateX(${spread}%) translateY(3%) rotate(${rot}deg)`
             : "translateX(0) translateY(0) rotate(0deg)",
         }}
       />
@@ -268,7 +318,7 @@ function BallTrack({ className = "", trailColor = "#C28B5B" }) {
 
 /* ================= BALL RUN over a single maze image (serpentine lanes) ================= */
 function MazeRun({
-  boxRef,          
+  boxRef,
   srcWidth,
   lanes,
   corridor,
@@ -341,9 +391,9 @@ function MazeRun({
       const pt = path.getPointAtLength(len);
       const roll = (pt.x / geo.r) * (180 / Math.PI);
 
-     ball.setAttribute("transform", `translate(${pt.x} ${pt.y}) rotate(${roll})`);
-     const trailLen = Math.max(0, len - geo.r * 1.2);
-     trail.style.strokeDashoffset = String(total - trailLen);
+      ball.setAttribute("transform", `translate(${pt.x} ${pt.y}) rotate(${roll})`);
+      const trailLen = Math.max(0, len - geo.r * 1.2);
+      trail.style.strokeDashoffset = String(total - trailLen);
     };
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(update);
@@ -391,6 +441,7 @@ function MazeRun({
     </svg>
   );
 }
+
 export default function HomePage() {
   const SPACE_LANES = [270, 600];
   const spaceRef = useRef(null);
@@ -402,7 +453,7 @@ export default function HomePage() {
   const enterIntro = useCallback(() => setIntroOnly(true), []);
 
   return (
-    <div className="relative w-full bg-[#EDD4A3] flex flex-col">
+    <div className="relative w-full bg-[#EDD4A3] flex flex-col overflow-x-clip">
       <Navbar />
 
       {!introOnly && (
@@ -442,29 +493,29 @@ export default function HomePage() {
       >
         {/* About Us Section — inside MazeBall so the ball can roll from the
             hero down into it; `data-ball-target` marks where it comes to rest. */}
-        <section id="about-us" className="relative w-full flex items-center justify-center py-24">
-          <Image
-            src="/mazeend.png"
-            alt="About Us"
-            width={400}
-            height={400}
-            data-ball-target=""
-            ref={ballTargetRef}
-            className="w-[25rem] h-[25rem] object-contain"
-          />
-          <Image
-            src="/aboutustxt.png"
-            alt="Sponsors Text"
-            width={300}
-            height={300}
-            className="absolute w-[16.5%] h-auto max-w-none animate-spin motion-reduce:animate-none"
-            style={{
-              left: "42%",
-              top: "30%",
-              transformOrigin: "50.15% 71.28%",
-              animationDuration: "10s",
-            }}
-          />
+        <section id="about-us" className="relative w-full flex items-center justify-center pt-24 pb-8 md:py-24">
+          <div className="relative md:contents">
+            <Image
+              src="/mazeend.png"
+              alt="About Us"
+              width={400}
+              height={400}
+              data-ball-target=""
+              ref={ballTargetRef}
+              className="w-[min(51vw,25rem)] h-[min(51vw,25rem)] object-contain"
+            />
+            <Image
+              src="/aboutustxt.png"
+              alt="Sponsors Text"
+              width={300}
+              height={300}
+              className="absolute w-[59.4%] left-[20.2%] top-[7.7%] md:w-[16.5%] md:left-[42%] md:top-[30%] h-auto max-w-none animate-spin motion-reduce:animate-none"
+              style={{
+                transformOrigin: "50.15% 71.28%",
+                animationDuration: "10s",
+              }}
+            />
+          </div>
         </section>
       </MazeBall>
         </>
@@ -478,7 +529,7 @@ export default function HomePage() {
       {/* Intro Section */}
       <section
         id="carpediem-intro"
-        className="relative w-full min-h-[150vh] bg-[#EDD4A3] flex flex-col items-center justify-center px-6 py-24 text-center overflow-hidden"
+        className="relative w-full min-h-0 md:min-h-[150vh] bg-[#EDD4A3] flex flex-col items-center justify-center px-6 pt-11 pb-0 md:py-24 text-center overflow-hidden"
       >
         <Image
           src="/carpediem-grass.png"
@@ -490,11 +541,10 @@ export default function HomePage() {
         />
 
         <p
-          className="relative z-10 mb-4"
+          className="relative z-10 mb-4 text-[12.5px] md:text-[clamp(1.1rem,2.5vw,37px)]"
           style={{
             fontFamily: "'BBH Hegarty', sans-serif",
             fontWeight: 400,
-            fontSize: "clamp(1.1rem, 2.5vw, 37px)",
             color: "#283618",
           }}
         >
@@ -502,12 +552,10 @@ export default function HomePage() {
         </p>
 
         <h2
-          className="relative z-10 uppercase"
+          className="relative z-10 uppercase text-[10vw] leading-[1.02] md:text-[clamp(2.75rem,10vw,150px)] md:leading-[1.0667]"
           style={{
             fontFamily: "'BBH Hegarty', sans-serif",
             fontWeight: 400,
-            fontSize: "clamp(2.75rem, 10vw, 150px)",
-            lineHeight: 1.0667,
             color: "#C28B5B",
           }}
         >
@@ -515,12 +563,10 @@ export default function HomePage() {
         </h2>
 
         <h2
-          className="relative z-10 uppercase"
+          className="relative z-10 normal-case md:uppercase text-[10vw] leading-[1.02] md:text-[clamp(2.75rem,10vw,150px)] md:leading-[1.0667]"
           style={{
             fontFamily: "'BBH Hegarty', sans-serif",
             fontWeight: 400,
-            fontSize: "clamp(2.75rem, 10vw, 150px)",
-            lineHeight: 1.0667,
             color: "#C28B5B",
           }}
         >
@@ -528,22 +574,19 @@ export default function HomePage() {
         </h2>
 
         <h2
-          className="relative z-10 uppercase mb-2"
+          className="relative z-10 uppercase mb-2 text-[10vw] leading-[1.02] md:text-[clamp(2.75rem,10vw,150px)] md:leading-[1.0667]"
           style={{
             fontFamily: "'BBH Hegarty', sans-serif",
             fontWeight: 400,
-            fontSize: "clamp(2.75rem, 10vw, 150px)",
-            lineHeight: 1.0667,
             color: "#C28B5B",
           }}
         >
           EDITION
         </h2>
 
-        <div className="relative z-10 w-full flex items-center justify-center -mt-16">
+        <div className="relative z-10 w-full flex items-center justify-center mt-11 md:-mt-16">
           <div
-            className="absolute left-1/2 -translate-x-1/2 w-screen flex flex-col"
-            style={{ gap: "clamp(24px, 6vw, 90px)" }}
+            className="absolute left-1/2 -translate-x-1/2 w-screen flex flex-col gap-[24vw] md:gap-[clamp(24px,6vw,90px)]"
           >
             <Image
               src="/carpediem-maze-top.png"
@@ -567,12 +610,10 @@ export default function HomePage() {
         </div>
 
         <p
-          className="relative z-10 max-w-[1000px] -mt-16"
+          className="relative z-10 max-w-[330px] md:max-w-[1000px] mt-10 md:-mt-16 text-[11px] leading-[1.25] md:text-[clamp(1rem,2vw,36px)] md:leading-[1.4]"
           style={{
             fontFamily: "'Bricolage Grotesque', sans-serif",
             fontWeight: 400,
-            fontSize: "clamp(1rem, 2vw, 36px)",
-            lineHeight: 1.4,
             color: "#000000",
           }}
         >
@@ -580,13 +621,17 @@ export default function HomePage() {
           energy and spirit! This year, with the theme Pravaah – The Flow of
           Expressions, we celebrate the rhythm of creativity, the pulse of
           talent, and the stream of unforgettable moments.
+          <span className="md:hidden">
+            {" "}From fiery beats to graceful moves, Carpe Diem promises to be a
+            vibrant celebration of expression.
+          </span>
         </p>
       </section>
 
       {/* Flagship Event Section */}
       <section
         id="flagship-event"
-        className="relative z-20 w-full pt-8 px-6 text-center"
+        className="relative z-20 w-full pt-5 md:pt-8 px-6 text-center"
       >
         <div
           className="absolute right-[-10%] top-[10%] w-[34%] pointer-events-none select-none z-0"
@@ -608,25 +653,23 @@ export default function HomePage() {
           />
         </div>
 
-        <h2 className="relative z-10 mx-auto mt-8 mb-8 flex flex-col w-full max-w-[1020px] text-center uppercase font-['Unbounded',sans-serif] font-black leading-[1.3]">
-          <span className="block text-[#1C1E2C] hover:text-[#FACC15] transition-colors duration-200 cursor-default text-[clamp(3rem,8.5vw,115px)]">
+        <h2 className="relative z-10 mx-auto mt-0 md:mt-8 mb-8 flex flex-col w-full max-w-[1020px] text-center uppercase font-['Unbounded',sans-serif] font-black leading-[1.44] md:leading-[1.3]">
+          <span className="block text-[#1C1E2C] hover:text-[#FACC15] transition-colors duration-200 cursor-default text-[9vw] md:text-[clamp(3rem,8.5vw,115px)]">
             OUR
           </span>
-          <span className="block text-[#1C1E2C] hover:text-[#FACC15] transition-colors duration-200 cursor-default text-[clamp(3rem,8.5vw,115px)]">
+          <span className="block text-[#1C1E2C] hover:text-[#FACC15] transition-colors duration-200 cursor-default text-[9vw] md:text-[clamp(3rem,8.5vw,115px)]">
             FLAGSHIP
           </span>
-          <span className="block text-[#1C1E2C] hover:text-[#FACC15] transition-colors duration-200 cursor-default text-[clamp(3rem,8.5vw,115px)]">
+          <span className="block text-[#1C1E2C] hover:text-[#FACC15] transition-colors duration-200 cursor-default text-[9vw] md:text-[clamp(3rem,8.5vw,115px)]">
             EVENT
           </span>
         </h2>
 
         <p
-          className="relative z-10 mx-auto max-w-[1150px] mt-35 px-4"
+          className="relative z-10 mx-auto max-w-[312px] md:max-w-[1150px] mt-7 md:mt-35 px-0 md:px-4 text-[10px] leading-[1.3] md:text-[clamp(1rem,2.5vw,60px)] md:leading-[1.2]"
           style={{
             fontFamily: "'Bricolage Grotesque', sans-serif",
             fontWeight: 400,
-            fontSize: "clamp(1rem, 2.5vw, 60px)",
-            lineHeight: 1.2,
             color: "#000000",
           }}
         >
@@ -692,7 +735,7 @@ export default function HomePage() {
           />
         </div>
 
-        <h2 className="relative z-20 w-full mt-[15%] text-center uppercase leading-none font-normal font-['BBH_Hegarty'] text-[#1C1F2A] text-[clamp(6rem,2.9vw,56px)]">
+        <h2 className="relative z-20 w-full mt-[15%] text-center uppercase leading-none font-normal font-['BBH_Hegarty'] text-[#1C1F2A] text-[10vw] md:text-[clamp(6rem,2.9vw,56px)]">
           Sponsors
         </h2>
 
@@ -701,7 +744,7 @@ export default function HomePage() {
             data-run=""
             src="/sponsorsection.png"
             alt=""
-            width={1920}  
+            width={1920}
             height={1080}
             unoptimized
             className="block w-full h-auto scale-x-[1.25] scale-y-[0.85] pointer-events-none select-none"
@@ -712,7 +755,7 @@ export default function HomePage() {
             srcWidth={1920}
             lanes={SPACE_LANES}
             corridor={90}
-            debug = {false}
+            debug={false}
           />
         </div>
 
