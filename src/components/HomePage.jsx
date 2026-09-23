@@ -32,6 +32,7 @@ function DigitReel({ digit, spinning }) {
     return () => clearInterval(interval);
   }, [spinning, targetIndex]);
 
+  
   return (
     <span className="relative inline-block h-[1.25em] w-[0.8em] overflow-hidden align-top">
       <span
@@ -125,6 +126,69 @@ function FlagshipStats() {
           </span>
         </div>
       ))}
+    </div>
+  );
+}
+
+/* ================= PERFORMER FAN (3 cards on hover) ================= */
+const FAN_IMAGES = {
+  left: "/performer-1.png",   // swap in different photos if you have them
+  center: "/performer-1.png",
+  right: "/performer-1.png",
+};
+
+function PerformerFan({ images = FAN_IMAGES }) {
+  const [open, setOpen] = useState(false);
+
+  const ease = "transform 500ms cubic-bezier(0.22, 1, 0.36, 1)";
+  const cardClass =
+    "absolute inset-0 h-full w-full object-cover pointer-events-none select-none motion-reduce:!transition-none";
+
+  return (
+    <div
+      className="relative z-10 cursor-pointer"
+      style={{ width: "min(30vw, 512px)", aspectRatio: "512 / 718" }}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      {/* Left card */}
+      <Image
+        src={images.left}
+        alt=""
+        width={1500}
+        height={1500}
+        className={`${cardClass} z-0`}
+        style={{
+          transition: ease,
+          transform: open
+            ? "translateX(-68%) translateY(3%) rotate(-20deg)"
+            : "translateX(0) translateY(0) rotate(0deg)",
+        }}
+      />
+
+      {/* Right card */}
+      <Image
+        src={images.right}
+        alt=""
+        width={1500}
+        height={1500}
+        className={`${cardClass} z-0`}
+        style={{
+          transition: ease,
+          transform: open
+            ? "translateX(68%) translateY(3%) rotate(20deg)"
+            : "translateX(0) translateY(0) rotate(0deg)",
+        }}
+      />
+
+      {/* Center card (always on top) */}
+      <Image
+        src={images.center}
+        alt="Performer"
+        width={1500}
+        height={1500}
+        className={`${cardClass} z-10`}
+      />
     </div>
   );
 }
@@ -297,13 +361,7 @@ export default function HomePage() {
             />
           </div>
 
-          <Image
-            src="/performer-1.png"
-            alt="Performer"
-            width={1200}
-            height={1200}
-            className="relative z-10 w-100 sm:w-96 md:w-[480px] lg:w-[2200px] object-contain"
-          />
+          <PerformerFan />
         </div>
 
         <p
@@ -326,7 +384,7 @@ export default function HomePage() {
       {/* Flagship Event Section */}
       <section
         id="flagship-event"
-        className="relative z-20 w-full bg-[#EDD4A3] pt-8 px-6 text-center"
+        className="relative z-20 w-full pt-8 px-6 text-center"
       >
         <div
           className="absolute right-[-10%] top-[10%] w-[34%] pointer-events-none select-none z-0"
@@ -392,7 +450,7 @@ export default function HomePage() {
               alt=""
               width={1920}
               height={600}
-              className="block w-full h-auto object-cover pointer-events-none select-none"
+              className="w-full h-auto top-[20%] object-cover pointer-events-none select-none"
             />
             <FlagshipStats />
           </div>
@@ -400,7 +458,7 @@ export default function HomePage() {
       </section>
 
       {/* Sponsors & Maze Section */}
-      <div className="relative z-10 w-full overflow-hidden -mt-[30%]">
+      <div className="relative z-10 w-full overflow-hidden -mt-[12.5%]">
         <Image
           src="/sponsormaze1.png"
           alt=""
@@ -410,13 +468,6 @@ export default function HomePage() {
         />
 
         <div className="relative w-full aspect-[1000/738] overflow-hidden -mt-[22%] -mb-[13%]">
-          <Image
-            src="/sponsormaze2.png"
-            alt=""
-            width={1920}
-            height={1080}
-            className="absolute -left-[14%] top-0 w-[130.9%] max-w-none h-auto scale-[1.10] origin-center pointer-events-none select-none"
-          />
           <Image
             src="/mazeend.png"
             alt=""
@@ -429,17 +480,17 @@ export default function HomePage() {
             alt="Sponsors"
             width={300}
             height={300}
-            className="absolute w-[16.5%] h-auto max-w-none animate-spin motion-reduce:animate-none"
+            className="absolute w-[14.5%] h-auto max-w-none animate-spin motion-reduce:animate-none"
             style={{
-              left: "42%",
-              top: "53%",
+              left: "43%",
+              top: "54.5%",
               transformOrigin: "50.15% 71.28%",
               animationDuration: "10s",
             }}
           />
         </div>
 
-        <h2 className="relative z-20 w-full mt-[3%] text-center uppercase leading-none font-normal font-['BBH_Hegarty'] text-[#1C1F2A] text-[clamp(6rem,2.9vw,56px)]">
+        <h2 className="relative z-20 w-full mt-[15%] text-center uppercase leading-none font-normal font-['BBH_Hegarty'] text-[#1C1F2A] text-[clamp(6rem,2.9vw,56px)]">
           Sponsors
         </h2>
 
@@ -448,7 +499,7 @@ export default function HomePage() {
           alt=""
           width={1920}
           height={1200}
-          className="relative z-10 block w-[124%] max-w-none -ml-[12%] -mt-[14.3%] aspect-[1712/1448] object-fill pointer-events-none select-none"
+          className="relative z-10 block w-[124%] max-w-none -ml-[12%] -mt-[0%] aspect-[1712/800] object-fill pointer-events-none select-none"
         />
 
         <Image
@@ -456,7 +507,7 @@ export default function HomePage() {
           alt=""
           width={1000}
           height={200}
-          className="relative z-10 block w-[46%] aspect-[662/96] object-cover object-left pointer-events-none select-none"
+          className="relative z-10 block w-[46%] aspect-[500/50] object-cover object-left pointer-events-none select-none"
         />
 
         <Image
@@ -464,7 +515,7 @@ export default function HomePage() {
           alt=""
           width={1000}
           height={200}
-          className="relative z-10 block w-[46%] aspect-[662/96] object-cover object-left mt-[8%] pointer-events-none select-none"
+          className="relative z-10 block w-[46%] aspect-[500/50] object-cover object-left mt-[5%] pointer-events-none select-none"
         />
 
         <div className="relative w-full -mt-[16.4%] aspect-[1440/1000] overflow-hidden">
@@ -483,6 +534,7 @@ export default function HomePage() {
             className="absolute left-0 top-[25.0%] w-[32.92%] h-auto max-w-none pointer-events-none select-none"
           />
         </div>
+
       </div>
     </div>
   );
