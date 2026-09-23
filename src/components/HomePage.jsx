@@ -6,6 +6,7 @@ import Navbar from "./navbar";
 import MazeBall from "./MazeBall";
 import CircleWipe from "./CircleWipe";
 
+
 /* ================= DIGIT REEL (single spinning character) ================= */
 function DigitReel({ digit, spinning }) {
   const reelDigits = "0123456789";
@@ -193,7 +194,206 @@ function PerformerFan({ images = FAN_IMAGES }) {
   );
 }
 
+function BallTrack({ className = "", trailColor = "#C28B5B" }) {
+  const trackRef = useRef(null);
+  const ballRef = useRef(null);
+  const trailRef = useRef(null);
+
+  useEffect(() => {
+    const track = trackRef.current;
+    const ball = ballRef.current;
+    const trail = trailRef.current;
+    if (!track || !ball || !trail) return;
+
+    let raf = 0;
+
+    const update = () => {
+      raf = 0;
+      const vh = window.innerHeight;
+      const rect = track.getBoundingClientRect();
+      const centerY = rect.top + rect.height / 2;
+
+      // 0 when the track enters at the bottom of the screen,
+      // 1 when it has climbed to 30% from the top
+      const p = Math.min(1, Math.max(0, (vh - centerY) / (vh * 0.7)));
+
+      const size = ball.offsetWidth;
+      const x = p * (track.clientWidth - size);
+      const rollDeg = (x / (size / 2)) * (180 / Math.PI); // rolls without slipping
+
+      ball.style.transform = `translateX(${x}px) rotate(${rollDeg}deg)`;
+      trail.style.width = `${x + size / 2}px`;
+    };
+
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  return (
+    <div
+      ref={trackRef}
+      className={`pointer-events-none absolute left-1/2 w-screen -translate-x-1/2 ${className}`}
+      style={{ "--ball": "clamp(28px, 5vw, 64px)", height: "var(--ball)" }}
+      aria-hidden="true"
+    >
+      {/* Trail (behind the ball) */}
+      <div
+        ref={trailRef}
+        className="absolute left-0 top-1/2 -translate-y-1/2 rounded-r-full"
+        style={{ width: 0, height: "55%", background: trailColor }}
+      />
+      {/* Ball */}
+      <Image
+        ref={ballRef}
+        src="/ball.png"
+        alt=""
+        width={50}
+        height={50}
+        className="absolute left-0 top-0 h-full w-auto will-change-transform"
+        style={{ width: "var(--ball)" }}
+      />
+    </div>
+  );
+}
+
+/* ================= BALL RUN over a single maze image (serpentine lanes) ================= */
+function MazeRun({
+  boxRef,          
+  srcWidth,
+  lanes,
+  corridor,
+  trailColor = "#C28B5B",
+  debug = false,   // draws red bands where the code thinks the corridors are
+}) {
+  const [geo, setGeo] = useState(null);
+  const pathRef = useRef(null);
+  const trailRef = useRef(null);
+  const ballRef = useRef(null);
+
+  useEffect(() => {
+    const box = boxRef.current;
+    if (!box) return;
+
+    const measure = () => {
+      const img = box.querySelector("img[data-run]");
+      if (!img) return;
+      const b = box.getBoundingClientRect();
+      const i = img.getBoundingClientRect();
+      const s = i.width / srcWidth; // PNG pixels -> screen pixels
+
+      const ys = lanes.map((y) => i.top - b.top + y * s);
+      const thick = corridor * s;
+      const r = (thick * 0.8) / 2; // ball fills 80% of the corridor
+      const xL = i.left - b.left - r * 2;
+      const xR = i.left - b.left + i.width + r * 2;
+
+      let d = `M ${xL} ${ys[0]}`;
+      ys.forEach((y, n) => {
+        const ltr = n % 2 === 0;
+        const xEnd = ltr ? xR : xL;
+        d += ` L ${xEnd} ${y}`;
+        if (n < ys.length - 1) {
+          const k = (ys[n + 1] - y) * 0.67 * (ltr ? 1 : -1);
+          d += ` C ${xEnd + k} ${y} ${xEnd + k} ${ys[n + 1]} ${xEnd} ${ys[n + 1]}`;
+        }
+      });
+
+      setGeo({ W: b.width, H: b.height, d, r, thick, ys, xL, xR });
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(box);
+    return () => ro.disconnect();
+  }, [boxRef, srcWidth, lanes, corridor]);
+
+  // 2) Move ball + trail along the path with scroll
+  useEffect(() => {
+    if (!geo) return;
+    const box = boxRef.current;
+    const path = pathRef.current;
+    const trail = trailRef.current;
+    const ball = ballRef.current;
+    if (!box || !path || !trail || !ball) return;
+
+    const total = path.getTotalLength();
+    trail.style.strokeDasharray = `${total} ${total}`;
+
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const vh = window.innerHeight;
+      const rect = box.getBoundingClientRect();
+      // starts when the maze top reaches 70% of the screen,
+      // finishes when its bottom reaches 40%
+      const p = Math.min(1, Math.max(0, (vh * 0.7 - rect.top) / (vh * 0.3 + rect.height)));
+      const len = p * total;
+      const pt = path.getPointAtLength(len);
+      const roll = (pt.x / geo.r) * (180 / Math.PI);
+
+     ball.setAttribute("transform", `translate(${pt.x} ${pt.y}) rotate(${roll})`);
+     const trailLen = Math.max(0, len - geo.r * 1.2);
+     trail.style.strokeDashoffset = String(total - trailLen);
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [geo, boxRef]);
+
+  if (!geo) return null;
+
+  return (
+    <svg
+      className="pointer-events-none absolute inset-0 z-[1]"
+      width="100%"
+      height="100%"
+      viewBox={`0 0 ${geo.W} ${geo.H}`}
+      aria-hidden="true"
+    >
+      {debug &&
+        geo.ys.map((y, n) => (
+          <rect key={n} x={0} y={y - geo.thick / 2} width={geo.W} height={geo.thick}
+                fill="rgba(255,0,0,0.25)" />
+        ))}
+
+      <path ref={pathRef} d={geo.d} fill="none" stroke="none" />
+      <path
+        ref={trailRef}
+        d={geo.d}
+        fill="none"
+        stroke={trailColor}
+        strokeWidth={geo.r}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <g ref={ballRef}>
+        <image href="/ball.png" x={-geo.r} y={-geo.r} width={geo.r * 2} height={geo.r * 2} />
+      </g>
+    </svg>
+  );
+}
 export default function HomePage() {
+  const SPACE_LANES = [270, 600];
+  const spaceRef = useRef(null);
   const ballTargetRef = useRef(null);
   // Everything above the Intro section is dropped once the blackout covers
   // the screen, so the page really does begin at the Intro afterwards
@@ -361,6 +561,8 @@ export default function HomePage() {
             />
           </div>
 
+          <BallTrack className="top-1/2 -translate-y-1/2 z-0" />
+
           <PerformerFan />
         </div>
 
@@ -494,13 +696,25 @@ export default function HomePage() {
           Sponsors
         </h2>
 
-        <Image
-          src="/sponsorsection.png"
-          alt=""
-          width={1920}
-          height={1200}
-          className="relative z-10 block w-[124%] max-w-none -ml-[12%] -mt-[0%] aspect-[1712/800] object-fill pointer-events-none select-none"
-        />
+        <div ref={spaceRef} className="relative z-10 w-full">
+          <Image
+            data-run=""
+            src="/sponsorsection.png"
+            alt=""
+            width={1920}  
+            height={1080}
+            unoptimized
+            className="block w-full h-auto scale-x-[1.25] scale-y-[0.85] pointer-events-none select-none"
+          />
+
+          <MazeRun
+            boxRef={spaceRef}
+            srcWidth={1920}
+            lanes={SPACE_LANES}
+            corridor={90}
+            debug = {false}
+          />
+        </div>
 
         <Image
           src="/carpediem-maze-bottom.png"
