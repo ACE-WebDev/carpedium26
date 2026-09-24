@@ -2,14 +2,11 @@
 
 export default function Footer() {
   const committeeMembers = [
-    { name: "Sudarsan P", phone: "+91 1234567890" },
-    { name: "Sudarsan P", phone: "+91 1234567890" },
-    { name: "Sudarsan P", phone: "+91 1234567890" },
-    { name: "Sudarsan P", phone: "+91 1234567890" },
-    { name: "Sudarsan P", phone: "+91 1234567890" },
-    { name: "Sudarsan P", phone: "+91 1234567890" },
-    { name: "Sudarsan P", phone: "+91 1234567890" },
-    { name: "Sudarsan P", phone: "+91 1234567890" },
+    { name: "Amrutha K", phone: "+91 76038874553" },
+    { name: "Madhav V K", phone: "+91 9444192898" },
+    { name: "Sakthi Guru S", phone: "+91 9600527934" },
+    { name: "Arshia Barirah A", phone: "+91 9566007948" },
+    { name: "Ram Karthick S V ", phone: "+91 9025696315" },
   ];
 
   return (

@@ -43,6 +43,16 @@ const PHOTO_MIN = 0.02;
 // release. 1 fills them exactly.
 const PHOTO_MAX = 0.6;
 // ---------------------------------------------------------------------
+// TUNE WHICH PART OF THE PICTURE SHOWS THROUGH THE LETTERFORMS HERE.
+// This slides the image behind the mask; the mask itself does not move,
+// so the glyphs stay put and simply frame a different part of the photo.
+// A percentage of the image's own height, applied in opening-photo.jsx.
+// NEGATIVE MOVES THE IMAGE UP.
+//   -25% = well up
+//   -12% = up a little
+//     0% = centred in the letterforms
+const PHOTO_NUDGE = "-12%";
+// ---------------------------------------------------------------------
 // TUNE THE FINAL ZOOM-OUT HERE.
 // How much the photo swells past its released size before easing back to
 // 1, which fills the hero box exactly. This is a multiplier on PHOTO_MAX,
@@ -170,6 +180,20 @@ export default function OpeningStage({ chrome, photo, after }) {
       const takeover = clamp01((t - TAKEOVER_START) / (1 - TAKEOVER_START));
 
       stage.style.setProperty("--zoom", String(1 + zoom * (MAX_SCALE - 1)));
+      // The wordmark sits above the viewport's centre (space-around), so
+      // as it zooms it also slides down onto that centre - the same point
+      // the photo is growing towards. Reuses the gap measureOffset()
+      // already computes, negated because logoDy is the wordmark's centre
+      // relative to the stage's: moving *down* by it lands on the middle.
+      // Divided by the live scale because this transform is composed
+      // after scale() on the same element, so the translate is drawn in
+      // the scaled coordinate system and would otherwise overshoot by
+      // that factor.
+      const logoScale = 1 + zoom * (MAX_SCALE - 1);
+      stage.style.setProperty(
+        "--logo-dy",
+        `${(-logoDy * zoom) / logoScale}px`,
+      );
       stage.style.setProperty("--fade", String(fade));
       stage.style.setProperty("--drift", `${(1 - fade) * 60}px`);
       stage.style.setProperty("--cover", String(cover));
@@ -179,6 +203,14 @@ export default function OpeningStage({ chrome, photo, after }) {
         String(clamp01((t - FADE_IN_AT) / FADE_IN_SPAN)),
       );
       stage.style.setProperty("--takeover", String(takeover));
+      // Slide the picture behind the mask. The mask does not move, so this
+      // only changes which part of the photo the glyphs frame. Scaled by
+      // (1 - takeover) so it eases back to 0 as the photo is released and
+      // the full-screen image ends up centred, not carrying the offset.
+      stage.style.setProperty(
+        "--photo-nudge",
+        `calc(${PHOTO_NUDGE} * ${1 - takeover})`,
+      );
       // Inside the letterforms the photo grows from small to PHOTO_MAX.
       const inMask = PHOTO_MIN + tint * (PHOTO_MAX - PHOTO_MIN);
       // On release it eases to exactly 1, which fills the clip - and the
@@ -213,7 +245,28 @@ export default function OpeningStage({ chrome, photo, after }) {
       );
       // Start on the wordmark's centre, ease to the viewport's, so the
       // photo slides into place as it fills the screen.
-      stage.style.setProperty("--photo-dy", `${logoDy * (1 - ease)}px`);
+      //
+      // This has to track where the wordmark *actually ends up*, not just
+      // where layout puts it, or the mask slides off the letterforms.
+      // Two corrections, both essential:
+      //
+      //  - `+ logoDy * zoom`: the logo also slides down by --logo-dy as it
+      //    zooms (see above). Without this the photo stays behind at the
+      //    layout position while the letterforms move, so raising or
+      //    lowering the logo (--logo-offset) pulled the two apart.
+      //    --logo-dy is -logoDy*zoom/scale in the logo's own scaled space,
+      //    which lands it logoDy*zoom further down on screen.
+      //  - `/ clipZoom`: this value is consumed inside a translate that is
+      //    composed after scale(var(--clip-zoom)) on the clip, so it is
+      //    drawn in that scaled space and would otherwise overshoot by up
+      //    to MAX_SCALE. The logo's own descent divides by its scale for
+      //    exactly the same reason.
+      const clipZoom = 1 + zoom * (MAX_SCALE - 1) * (1 - ease);
+      const logoCentre = logoDy + logoDy * zoom * (ease - 1);
+      stage.style.setProperty(
+        "--photo-dy",
+        `${(logoCentre * (1 - ease)) / clipZoom}px`,
+      );
     };
 
     // Paint the true t=0 state before the first scroll. Without this the
