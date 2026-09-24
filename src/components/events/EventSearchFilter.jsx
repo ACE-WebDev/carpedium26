@@ -7,7 +7,7 @@ const CATEGORIES = [
   'Telugu', 'Hindi', 'Fun', 'Arts', 'Design',
 ];
 
-const PAGE_BG     = '#18130d';  // must match page.jsx backgroundColor
+const PAGE_BG     = '#EDD4A3';  // must match page.jsx backgroundColor
 const TICKET_DARK = '#1e1508';  // outer dark ticket frame
 
 /* ─── embedded responsive styles ────────────────────────────────────────────
@@ -46,60 +46,43 @@ function TicketBadge({ label }) {
   const [hovered, setHovered] = useState(false);
 
   /*
-   * Ticket shape:
-   * • clip-path gives 8px chamfered (diagonal) corners on all 4 corners
-   * • 4 radial-gradient layers punch semicircle perforations into
-   *   all 4 edges — matching the vintage ticket reference image
+   * Golden ticket badge:
+   * • Directly sits on the background (no dark brown outer frame/borders)
+   * • 7px chamfered corners matching the vintage ticket aesthetic
+   * • Warm golden gradient matching navbar #C28B5B
+   * • Subtle cream inner border
    */
-  const outer = {
+  const badgeStyle = {
     width: '100%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '5px 8px',
-    boxSizing: 'border-box',
-    background: [
-      /* left edge perforations  */
-      `radial-gradient(circle at 0 50%,    ${PAGE_BG} 5px, ${TICKET_DARK} 5px) 0    0    / 10px 14px repeat-y`,
-      /* right edge perforations */
-      `radial-gradient(circle at 100% 50%, ${PAGE_BG} 5px, ${TICKET_DARK} 5px) 100% 0    / 10px 14px repeat-y`,
-      /* top edge perforations   */
-      `radial-gradient(circle at 50% 0,    ${PAGE_BG} 4px, ${TICKET_DARK} 4px) 0    0    / 14px 8px  repeat-x`,
-      /* bottom edge perforations*/
-      `radial-gradient(circle at 50% 100%, ${PAGE_BG} 4px, ${TICKET_DARK} 4px) 0    100% / 14px 8px  repeat-x`,
-      TICKET_DARK,
-    ].join(', '),
-    /* 8px chamfered corners — larger diagonal cut like reference */
-    clipPath:
-      'polygon(8px 0%, calc(100% - 8px) 0%, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0% calc(100% - 8px), 0% 8px)',
-    cursor: 'default',
-    transition: 'transform 0.15s ease',
-    transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
-  };
-
-  /* Golden fill — same hue as navbar #C28B5B */
-  const inner = {
-    position: 'relative',
-    width: '100%',
-    padding: '14px 6px',
+    padding: '13px 4px',
     boxSizing: 'border-box',
     textAlign: 'center',
     background: hovered
       ? 'linear-gradient(160deg, #e8b87a 0%, #cc9460 35%, #b47844 70%, #9e6432 100%)'
       : 'linear-gradient(160deg, #daa86e 0%, #c28b5b 35%, #a87040 70%, #945e2c 100%)',
     borderRadius: '4px',
-    transition: 'background 0.2s ease',
+    clipPath:
+      'polygon(7px 0%, calc(100% - 7px) 0%, 100% 7px, 100% calc(100% - 7px), calc(100% - 7px) 100%, 7px 100%, 0% calc(100% - 7px), 0% 7px)',
+    border: '1.5px solid rgba(255, 248, 215, 0.85)',
+    boxShadow: hovered
+      ? '0 6px 16px rgba(0, 0, 0, 0.45), 0 0 12px rgba(194, 139, 91, 0.35)'
+      : '0 2px 8px rgba(0, 0, 0, 0.3)',
+    cursor: 'pointer',
+    position: 'relative',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    transition: 'transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease',
+    transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
   };
 
-  /* Cream double-line inner border — matches ticket reference */
   const innerBorder = {
     position: 'absolute',
-    inset: '3px',
+    inset: '2.5px',
     borderRadius: '3px',
-    border: '1.5px solid rgba(255, 248, 215, 0.9)',
+    clipPath:
+      'polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px)',
+    border: '1px solid rgba(255, 248, 215, 0.4)',
     pointerEvents: 'none',
   };
 
@@ -119,14 +102,12 @@ function TicketBadge({ label }) {
 
   return (
     <div
-      style={outer}
+      style={badgeStyle}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <div style={inner}>
-        <span style={innerBorder} aria-hidden="true" />
-        <span style={labelStyle}>{label}</span>
-      </div>
+      <span style={innerBorder} aria-hidden="true" />
+      <span style={labelStyle}>{label}</span>
     </div>
   );
 }
