@@ -182,33 +182,31 @@ function PerformerFan({ images = FAN_IMAGES }) {
     };
   }, [isTouch]);
 
-  const spread = isTouch ? 40 : 68;
-  const rot = isTouch ? 12 : 20; // tighter fan on phones so it stays on screen // % sideways offset of the side cards
+  const spread = isTouch ? 30 : 55;
+  const rot = isTouch ? 10 : 20;
   const ease = "transform 500ms cubic-bezier(0.22, 1, 0.36, 1)";
   const cardClass =
     "absolute inset-0 h-full w-full object-cover pointer-events-none select-none motion-reduce:!transition-none";
 
   return (
     <div
-      ref={ref}
-      className="relative z-10 cursor-pointer"
-      // slightly narrower on phones so the fanned-out cards stay on screen
-      style={{
-        width: isTouch ? "min(62vw, 300px)" : "min(30vw, 512px)",
-        aspectRatio: "512 / 718",
-        // phones: big when closed, shrinks a little when fanned so all 3 fit
-        transform: isTouch && open ? "scale(0.74)" : "none",
-        transition: "transform 500ms cubic-bezier(0.22, 1, 0.36, 1)",
-      }}
-      onMouseEnter={() => !isTouch && setOpen(true)}
-      onMouseLeave={() => !isTouch && setOpen(false)}
-    >
+        ref={ref}
+        className="relative z-10 cursor-pointer"
+        style={{
+          width: isTouch ? "min(90vw, 380px)" : "min(40vw, 640px)",
+          aspectRatio: "512 / 718",
+          transform: isTouch && open ? "scale(0.65)" : "none",
+          transition: "transform 500ms cubic-bezier(0.22, 1, 0.36, 1)",
+        }}
+        onMouseEnter={() => !isTouch && setOpen(true)}
+        onMouseLeave={() => !isTouch && setOpen(false)}
+      >
       {/* Left card */}
       <Image
         src={images.left}
         alt=""
-        width={1500}
-        height={1500}
+        width={2000}
+        height={2000}
         className={`${cardClass} z-0`}
         style={{
           transition: ease,
@@ -222,8 +220,8 @@ function PerformerFan({ images = FAN_IMAGES }) {
       <Image
         src={images.right}
         alt=""
-        width={1500}
-        height={1500}
+        width={2000}
+        height={2000}
         className={`${cardClass} z-0`}
         style={{
           transition: ease,
@@ -237,9 +235,9 @@ function PerformerFan({ images = FAN_IMAGES }) {
       <Image
         src={images.center}
         alt="Performer"
-        width={1500}
-        height={1500}
-        className={`${cardClass} z-10`}
+        width={2000}
+        height={2000}
+        className={`${cardClass} z-10 `}
       />
     </div>
   );
@@ -344,7 +342,7 @@ function MazeRun({
 
       const ys = lanes.map((y) => i.top - b.top + y * s);
       const thick = corridor * s;
-      const r = (thick * 0.8) / 2; // ball fills 80% of the corridor
+      const r = (thick * 0.7) / 2; // ball fills 80% of the corridor
       const xL = i.left - b.left - r * 2;
       const xR = i.left - b.left + i.width + r * 2;
 
@@ -385,8 +383,6 @@ function MazeRun({
       raf = 0;
       const vh = window.innerHeight;
       const rect = box.getBoundingClientRect();
-      // starts when the maze top reaches 70% of the screen,
-      // finishes when its bottom reaches 40%
       const p = Math.min(1, Math.max(0, (vh * 0.7 - rect.top) / (vh * 0.3 + rect.height)));
       const len = p * total;
       const pt = path.getPointAtLength(len);
@@ -442,10 +438,230 @@ function MazeRun({
     </svg>
   );
 }
+
+const IDLE_MS = 1000;
+
+function ScrollHint() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    let timer;
+
+    const startTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => setVisible(true), IDLE_MS);
+    };
+
+    const onActivity = () => {
+      setVisible(false); // hide as soon as the user scrolls
+      startTimer();      // and wait for 3s of stillness before showing again
+    };
+
+    startTimer(); // initial 3s wait after page load
+
+    window.addEventListener("scroll", onActivity, { passive: true });
+    window.addEventListener("wheel", onActivity, { passive: true });
+    window.addEventListener("touchmove", onActivity, { passive: true });
+    window.addEventListener("keydown", onActivity);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("scroll", onActivity);
+      window.removeEventListener("wheel", onActivity);
+      window.removeEventListener("touchmove", onActivity);
+      window.removeEventListener("keydown", onActivity);
+    };
+  }, []);
+
+  return (
+    <button
+      onClick={() =>
+        document.getElementById("about-us")?.scrollIntoView({ behavior: "smooth" })
+      }
+      aria-hidden={!visible}
+      tabIndex={visible ? 0 : -1}
+      className={`absolute bottom-16 flex cursor-pointer flex-col items-center gap-3 transition-opacity duration-500 ${
+        visible ? "opacity-100" : "opacity-0 pointer-events-none"
+      }`}
+    >
+      <span className="grid h-16 w-16 place-items-center rounded-full bg-[#171C2E] border-[3px] border-[#505763]">
+        <svg
+          className="h-6 w-6"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#FDF7DE"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M12 5v14M5 12l7 7 7-7" />
+        </svg>
+      </span>
+      <span className="font-['Archivo_Black'] text-lg font-bold uppercase tracking-wider text-[#1C1E2C]">
+        SCROLL DOWN
+      </span>
+    </button>
+  );
+}
+
+/* ================= BAR DROP =================
+   Ball rolls in the corridor between two bars (data-bar="a" above, "b" below),
+   leaves the right edge, and falls as a horizontal projectile onto the image
+   marked data-drop-target. Scroll-driven. */
+function BarDrop({
+  boxRef,
+  afterRef = null,   // the box of the animation to wait for (MazeRun's box)
+  afterAt = 0.4,     // where that box's bottom must be on screen: 0.4 = 40% down, matching MazeRun's finish
+  target = { x: 0.9, y: 0.1 },
+  startAt = 0.8,
+  endAt = 0.6,
+  trailColor = "#C28B5B",
+  airTrail = false,
+  debug = false,
+}) {
+  const [geo, setGeo] = useState(null);
+  const trailRef = useRef(null);
+  const ballRef = useRef(null);
+
+  // 1) Measure the layout
+  useEffect(() => {
+    const box = boxRef.current;
+    if (!box) return;
+
+    const measure = () => {
+      const a = box.querySelector("[data-bar='a']");
+      const b = box.querySelector("[data-bar='b']");
+      const t = box.querySelector("[data-drop-target]");
+      if (!a || !b || !t) return;
+
+      const bx = box.getBoundingClientRect();
+      const A = a.getBoundingClientRect();
+      const B = b.getBoundingClientRect();
+      const T = t.getBoundingClientRect();
+
+      const thick = B.top - A.bottom;
+      if (thick <= 0) return;
+      const r = (thick * 0.8) / 2;
+      const yc = (A.bottom + B.top) / 2 - bx.top;
+      const xStart = A.left - bx.left - r * 2;
+      const x0 = A.right - bx.left;
+
+      const tx = T.left - bx.left + T.width * target.x;
+      const ty = T.top - bx.top + T.height * target.y;
+      const dx = Math.max(tx - x0, 1);
+      const dy = ty - yc;
+      const D = ty - (A.top - bx.top);
+
+      if (![thick, r, yc, xStart, x0, tx, ty, dx, dy, D].every(Number.isFinite) || r <= 0 || dy <= 0) return;
+      setGeo({ W: bx.width, H: bx.height, r, thick, yc, xStart, x0, tx, ty, dx, dy, D,
+               rollLen: x0 - xStart });
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(box);
+    window.addEventListener("load", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("load", measure);
+    };
+  }, [boxRef, target.x, target.y]);
+
+  // 2) Move the ball with scroll
+  useEffect(() => {
+    if (!geo) return;
+    const box = boxRef.current;
+    const a = box?.querySelector("[data-bar='a']");
+    const trail = trailRef.current;
+    const ball = ballRef.current;
+    if (!a || !trail || !ball) return;
+
+    let raf = 0;
+    const update = () => {
+        raf = 0;
+        const { r, yc, xStart, x0, dy, rollLen, D } = geo;
+        const vh = window.innerHeight;
+
+        // 0 until MazeRun has finished, then grows as you keep scrolling
+        const gate = afterRef?.current
+          ? vh * afterAt - afterRef.current.getBoundingClientRect().bottom
+          : vh * startAt - a.getBoundingClientRect().top;
+
+        const range = ((startAt - endAt) * vh + D)*0.5;
+        const p = Math.min(1, Math.max(0, gate / range));
+
+        const dist = p * (rollLen + dy);
+        let x, y, d;
+
+        if (dist <= rollLen) {
+          x = xStart + dist;
+          y = yc;
+          d = dist < 1 ? "" : `M ${xStart} ${yc} L ${x} ${y}`;
+        } else {
+          const t = (dist - rollLen) / dy;
+          x = x0;
+          y = yc + dy * t * t;
+          d = airTrail
+            ? `M ${xStart} ${yc} L ${x0} ${yc} L ${x0} ${y}`
+            : `M ${xStart} ${yc} L ${x0} ${yc}`;
+        }
+
+        if (!Number.isFinite(x) || !Number.isFinite(y) || !(r > 0)) return;
+        trail.setAttribute("d", d);
+        ball.setAttribute("transform", `translate(${x} ${y}) rotate(${(x / r) * (180 / Math.PI)})`);
+      };
+
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [geo, boxRef, afterRef, afterAt, startAt, endAt, airTrail]);
+
+  if (!geo) return null;
+
+  return (
+    <svg
+      className="pointer-events-none absolute inset-0 z-20"
+      width="100%"
+      height="100%"
+      viewBox={`0 0 ${geo.W} ${geo.H}`}
+      aria-hidden="true"
+    >
+      {debug && (
+        <>
+          <rect x={0} y={geo.yc - geo.thick / 2} width={geo.W} height={geo.thick}
+                fill="rgba(255,0,0,0.25)" />
+          <circle cx={geo.tx} cy={geo.ty} r={8} fill="red" />
+        </>
+      )}
+      <path
+        ref={trailRef}
+        fill="none"
+        stroke={trailColor}
+        strokeWidth={geo.r}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <g ref={ballRef}>
+        <image href="/ball.png" x={-geo.r} y={-geo.r} width={geo.r * 2} height={geo.r * 2} />
+      </g>
+    </svg>
+  );
+}
+
 export default function HomePage() {
-  const SPACE_LANES = [270, 600];
+  const SPACE_LANES = [240, 525];
   const spaceRef = useRef(null);
   const ballTargetRef = useRef(null);
+  const dropRef = useRef(null);   // <-- add
   // Everything above the Intro section is dropped once the blackout covers
   // the screen, so the page really does begin at the Intro afterwards
   // rather than just being scrolled past the maze.
@@ -463,32 +679,8 @@ export default function HomePage() {
         heroClassName="h-[150vh]"
         hero={
         <section className="relative h-screen w-full flex flex-col items-center justify-start pt-32">
-          <button
-            onClick={() =>
-              document
-                .getElementById("about-us")
-                ?.scrollIntoView({ behavior: "smooth" })
-            }
-            className="absolute bottom-16 flex cursor-pointer flex-col items-center gap-3"
-          >
-            <span className="grid h-16 w-16 place-items-center rounded-full bg-[#171C2E] border-[3px] border-[#505763]">
-              <svg
-                className="h-6 w-6"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#FDF7DE"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M12 5v14M5 12l7 7 7-7" />
-              </svg>
-            </span>
-            <span className="font-['Archivo_Black'] text-lg font-bold uppercase tracking-wider text-[#1C1E2C]">
-              SCROLL DOWN
-            </span>
-            </button>
-          </section>
+          <ScrollHint />
+        </section>
         }
       >
         {/* About Us Section — inside MazeBall so the ball can roll from the
@@ -586,21 +778,21 @@ export default function HomePage() {
 
         <div className="relative z-10 w-full flex items-center justify-center mt-11 md:-mt-16">
           <div
-            className="absolute left-1/2 -translate-x-1/2 w-screen flex flex-col gap-[24vw] md:gap-[clamp(24px,6vw,90px)]"
+            className="absolute left-1/2 -translate-x-1/2 w-screen flex flex-col gap-[7.5vw] md:gap-[clamp(24px,3vw,90px)]"
           >
             <Image
               src="/carpediem-maze-top.png"
               alt=""
               width={1920}
               height={300}
-              className="w-full h-auto object-cover pointer-events-none select-none"
+              className="w-full h-auto object-cover scale-y-[0.6] pointer-events-none select-none"
             />
             <Image
               src="/carpediem-maze-bottom.png"
               alt=""
               width={1920}
               height={300}
-              className="w-full h-auto object-cover pointer-events-none select-none"
+              className="w-full h-auto object-cover scale-y-[0.6] pointer-events-none select-none"
             />
           </div>
 
@@ -735,7 +927,7 @@ export default function HomePage() {
           />
         </div>
 
-        <h2 className="relative z-20 w-full mt-[15%] text-center uppercase leading-none font-normal font-['BBH_Hegarty'] text-[#1C1F2A] text-[10vw] md:text-[clamp(6rem,2.9vw,56px)]">
+        <h2 className="relative z-20 w-full mt-[10%] mb-0 text-center uppercase leading-none font-normal font-['BBH_Hegarty'] text-[#1C1F2A] text-[10vw] md:text-[clamp(6rem,2.9vw,56px)]">
           Sponsors
         </h2>
 
@@ -747,7 +939,7 @@ export default function HomePage() {
             width={1920}  
             height={1080}
             unoptimized
-            className="block w-full h-auto scale-x-[1.25] scale-y-[0.85] pointer-events-none select-none"
+            className="block w-full h-auto scale-x-[1.25] scale-y-[0.75] pointer-events-none select-none"
           />
 
           <MazeRun
@@ -759,24 +951,29 @@ export default function HomePage() {
           />
         </div>
 
-        <Image
-          src="/carpediem-maze-bottom.png"
-          alt=""
-          width={1000}
-          height={200}
-          className="relative z-10 block w-[46%] aspect-[500/50] object-cover object-left pointer-events-none select-none"
-        />
-
-        <Image
-          src="/carpediem-maze-top.png"
-          alt=""
-          width={1000}
-          height={200}
-          className="relative z-10 block w-[46%] aspect-[500/50] object-cover object-left mt-[5%] pointer-events-none select-none"
-        />
-
-        <div className="relative w-full -mt-[16.4%] aspect-[1440/1000] overflow-hidden">
+        <div ref={dropRef} className="relative w-full">
           <Image
+            data-bar="a"
+            src="/carpediem-maze-bottom.png"
+            alt=""
+            width={1000}
+            height={200}
+            className="relative z-10 block w-[46%] aspect-[500/50] -mt-[10%] object-cover object-left pointer-events-none select-none"
+          />
+
+          <Image
+            data-bar="b"
+            src="/carpediem-maze-top.png"
+            alt=""
+            width={1000}
+            height={200}
+            className="relative z-10 block w-[46%] aspect-[500/50] object-cover object-left mt-[5%] pointer-events-none select-none"
+          />
+
+
+        <div className="relative w-full -mt-[10%] aspect-[1440/1000] overflow-hidden">
+          <Image
+            data-drop-target=""
             src="/endmaze1.png"
             alt=""
             width={1920}
@@ -792,6 +989,8 @@ export default function HomePage() {
           />
         </div>
 
+        <BarDrop boxRef={dropRef} afterRef={spaceRef} target={{ x: 0.9, y: 0.1 }} />
+      </div>
       </div>
     </div>
   );
