@@ -69,6 +69,7 @@ export default function EventsExplorer({ initialEvents = [] }) {
             letterSpacing: '0',
             margin: 0,
             userSelect: 'none',
+            textShadow: '0 2px 24px rgba(194,139,91,0.5)',
           }}
         >
           EXPLORE
