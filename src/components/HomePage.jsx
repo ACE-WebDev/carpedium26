@@ -661,12 +661,11 @@ export default function HomePage() {
   const SPACE_LANES = [240, 525];
   const spaceRef = useRef(null);
   const ballTargetRef = useRef(null);
-  const dropRef = useRef(null);   // <-- add
-  // Everything above the Intro section is dropped once the blackout covers
-  // the screen, so the page really does begin at the Intro afterwards
-  // rather than just being scrolled past the maze.
+  const dropRef = useRef(null);
   const [introOnly, setIntroOnly] = useState(false);
   const enterIntro = useCallback(() => setIntroOnly(true), []);
+  const [wipeDone, setWipeDone] = useState(false);
+  const finishWipe = useCallback(() => setWipeDone(true), []);
 
   return (
     <div className="relative w-full bg-[#EDD4A3] flex flex-col overflow-x-clip">
@@ -701,7 +700,7 @@ export default function HomePage() {
               alt="Sponsors Text"
               width={300}
               height={300}
-              className="absolute w-[59.4%] left-[20.2%] top-[7.7%] md:w-[16.5%] md:left-[42%] md:top-[30%] h-auto max-w-none animate-spin motion-reduce:animate-none"
+              className="absolute w-[62.5%] left-[20.5%] top-[20%] md:w-[16.5%] md:left-[42%] md:top-[30%] h-auto max-w-none animate-spin motion-reduce:animate-none"
               style={{
                 transformOrigin: "50.15% 71.28%",
                 animationDuration: "10s",
@@ -716,7 +715,7 @@ export default function HomePage() {
       {/* Outside the block above on purpose: it unmounts that content
           mid-transition, so it must not be a child of it or it would tear
           itself down before the circle could shrink back. */}
-      <CircleWipe originRef={ballTargetRef} onCovered={enterIntro} />
+      <CircleWipe originRef={ballTargetRef} onCovered={enterIntro} onDone={finishWipe} />
 
       {/* Intro Section */}
       <section
@@ -796,7 +795,7 @@ export default function HomePage() {
             />
           </div>
 
-          <BallTrack className="top-1/2 -translate-y-1/2 z-0" />
+          <BallTrack enabled={wipeDone} className="top-1/2 -translate-y-1/2 z-0" />
 
           <PerformerFan />
         </div>
