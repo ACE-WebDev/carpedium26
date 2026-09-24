@@ -197,10 +197,12 @@ export function simulateFall(svgText, config) {
 
   let x = ball.startX ?? route.points[0][0];
   let y = ball.startY;
-  let vx = 0;
+  // A fall can start with the ball already rolling sideways (the one after
+  // the Sponsors is launched off the end of a bar), spinning to match.
+  let vx = ball.startVX ?? 0;
   let vy = 0;
   let angle = 0; // radians, clockwise on screen
-  let spin = 0; // rad/s
+  let spin = vx / radius; // rad/s
   // Where on the route it starts. Searched along the whole route: a fall
   // can start part-way down it (the Sponsors run starts below the first
   // arc), and a short search from the top would lock onto the wrong stretch.
@@ -347,32 +349,39 @@ const whenIdle = () =>
     }
   });
 
-let svgText = null;
+const svgTexts = new Map();
 const falls = new Map();
 
-/* The fall from `start` ({ x, y } in maze px), simulated once per page load
-   per starting point: the hero and the Sponsors maze each start from their
-   own. */
-export function loadFall(config, start) {
-  const key = `${start.x},${start.y}`;
+/* The fall from `start` ({ x, y } in maze px, and optionally `vx`, how fast
+   it is already moving sideways) through the walls in `walls`, simulated
+   once per page load per starting point: the hero and the Sponsors maze each
+   start from their own, and the run after the Sponsors has walls of its own
+   too. */
+export function loadFall(config, start, walls = "/Maze.svg") {
+  const key = `${walls} ${start.x},${start.y},${start.vx ?? 0}`;
   if (!falls.has(key)) {
-    svgText ??= fetch("/Maze.svg").then((response) => {
-      if (!response.ok) throw new Error(`Maze.svg: HTTP ${response.status}`);
-      return response.text();
-    });
+    if (!svgTexts.has(walls)) {
+      svgTexts.set(
+        walls,
+        fetch(walls).then((response) => {
+          if (!response.ok) throw new Error(`${walls}: HTTP ${response.status}`);
+          return response.text();
+        })
+      );
+    }
     falls.set(
       key,
-      svgText.then(async (svg) => {
+      svgTexts.get(walls).then(async (svg) => {
         await whenIdle();
         const fall = simulateFall(svg, {
           ...config,
-          ball: { ...config.ball, startX: start.x, startY: start.y },
+          ball: { ...config.ball, startX: start.x, startY: start.y, startVX: start.vx },
         });
         if (fall.stats.slips || !fall.stats.finished) {
           console.warn(
-            `Ball animation: starting from (${start.x}, ${start.y}) the ball got stuck ${fall.stats.slips} time(s) and was let through a wall` +
+            `Ball animation: starting from (${start.x}, ${start.y}) in ${walls} the ball got stuck ${fall.stats.slips} time(s) and was let through a wall` +
               (fall.stats.finished ? "." : ", and never reached the bottom.") +
-              " Usually ball.size is too big for the gaps, or route.stiffness / route.maxForce are too low. (src/config/ballAnimation.js)"
+              " Usually ball.size is too big for the gaps, or that fall's route.stiffness / route.maxForce are too low. (src/config/ballAnimation.js)"
           );
         }
         return fall;

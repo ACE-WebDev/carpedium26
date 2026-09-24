@@ -16,6 +16,37 @@ export const HERO_VIEW = { x: 158, y: -100, width: 2028, height: 1831 };
 
 const WARP_STEPS = 400;
 
+/* Slowest the ball rolls in at, maze px/s, so it still gets there when the
+   launch speed is 0. */
+const MIN_ROLL_SPEED = 150;
+
+/* The simulated fall with a roll along a flat floor put in front of it:
+   from `fromX` (maze units) to where the fall starts, at `speed`, spinning as
+   a ball of `radius` rolling without slipping would. The run after the
+   Sponsors uses it for the stretch between the two bars before it is
+   launched off their end at that same speed. */
+export function withRollIn(sim, fromX, speed, radius) {
+  const distance = sim.xs[0] - fromX;
+  const steps = Math.ceil(distance / Math.max(speed, MIN_ROLL_SPEED) / sim.dt);
+  if (!(steps > 0)) return sim;
+
+  const count = steps + sim.count;
+  const xs = new Float32Array(count);
+  const ys = new Float32Array(count);
+  const angles = new Float32Array(count);
+  for (let k = 0; k < steps; k++) {
+    // Still to roll; the angle counts down to the fall's starting 0.
+    const left = distance * (1 - k / steps);
+    xs[k] = sim.xs[0] - left;
+    ys[k] = sim.ys[0];
+    angles[k] = (-left / radius) * (180 / Math.PI);
+  }
+  xs.set(sim.xs, steps);
+  ys.set(sim.ys, steps);
+  angles.set(sim.angles, steps);
+  return { ...sim, count, xs, ys, angles };
+}
+
 /* The whole fall in maze units: the simulated run through the maze, then a
    ballistic drop — same gravity, velocity and spin it left the maze with —
    to (targetX, targetY), the centre of the About Us image. That last leg
