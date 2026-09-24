@@ -75,6 +75,33 @@ const ballAnimation = {
     lookahead: 80,
   },
 
+  // The last run, after the Sponsors: the ball rolls in from the left
+  // between the two bars, shoots off their end and drops out through the
+  // bottom of the maze below them (endmaze1.png), landing on the Carpe Diem
+  // logo under it, which lights up. Walls: public/EndMaze.svg. Plays in
+  // `mode` like the others.
+  end: {
+    // How fast it rolls along the bars and leaves their end, sideways, in
+    // maze px/s — so how far it shoots out before it drops. 0 = it drops
+    // dead off the end. ~600–1000 carries it across to the arc on the right,
+    // which throws it back down the middle; much faster and it lands on top
+    // of that arc and rolls back off it instead.
+    launchSpeed: 1800,
+    // Once it lands on the logo it shrinks away to nothing over this long,
+    // in ms. 0 = it stays.
+    vanishMs: 450,
+    // Its route through this maze and how hard it is pulled along it, as in
+    // `route` above. Kept gentle, so the launch and the walls do the
+    // throwing about and the pull only makes sure it ends up in the middle.
+    route: {
+      path: "M1120.70 767.60C1250.00 767.60 1360.00 850.00 1401.00 925.00C1330.00 1000.00 1187.00 1100.00 1187.00 1231.00L1187.00 1497.00",
+      stiffness: 10,
+      damping: 8,
+      maxForce: 2.2,
+      lookahead: 80,
+    },
+  },
+
   auto: {
     // Playback speed. 1 = real time, 0.5 = half speed, 2 = double.
     speed: 0.3,

@@ -9,6 +9,7 @@ import {
   buildWarp,
   indexAt,
   sampleTimeline,
+  withRollIn,
 } from "./mazeBallTimeline";
 
 /*
@@ -36,9 +37,17 @@ const SPONSORS_WIDTH = 2072; // sponsormaze1.png's own width, px
 const SPONSORS_SCALE = 0.866;
 const SPONSORS_OFFSET = [6, 87];
 
+/* endmaze1.png is the lower right of that maze again:
+   endmaze1 px = maze.png px * END_SCALE + END_OFFSET, found the same way
+   (97% of it covered). It leaves out some of the maze's pieces and moves
+   one, so its walls are in EndMaze.svg rather than Maze.svg. */
+const END_WIDTH = 1440; // endmaze1.png's own width, px
+const END_SCALE = 0.865;
+const END_OFFSET = [-307, -65];
+
 /* How the Sponsors fall is paced against scroll: it starts once the ball
    has been scrolled up to START_AT of the way down the screen, and lands with
-   the maze end at END_AT. */
+   the maze end at END_AT. The run after the Sponsors is paced the same way. */
 const SPONSORS_START_AT = 0.3;
 const SPONSORS_END_AT = 0.6;
 /* On small screens a whole maze fits in view, which would leave next to no
@@ -49,6 +58,18 @@ const MIN_SPAN = 0.45;
 /* Both runs drop from the same spot at the top of the maze, so they play the
    very same fall (simulated once, see loadFall). */
 const START = { x: config.ball.startX, y: config.ball.startY };
+
+function scrollRangeBelow({ startY, targetY, minStartLine }) {
+  const vh = window.innerHeight;
+  const travel = targetY - startY;
+  let startLine = Math.max(vh * SPONSORS_START_AT, minStartLine);
+  let span = travel - (vh * SPONSORS_END_AT - startLine);
+  if (span < vh * MIN_SPAN) {
+    span = vh * MIN_SPAN;
+    startLine = vh * SPONSORS_END_AT - travel + span;
+  }
+  return { top0: startLine - startY, span };
+}
 
 const VARIANTS = {
   // maze.png framed by HERO_VIEW across the hero's full width (MazeBall);
@@ -94,20 +115,52 @@ const VARIANTS = {
         offsetY: box.top - rootBox.top + SPONSORS_OFFSET[1] * k,
       };
     },
-    scrollRange: ({ startY, targetY, minStartLine }) => {
-      const vh = window.innerHeight;
-      const travel = targetY - startY;
-      let startLine = Math.max(vh * SPONSORS_START_AT, minStartLine);
-      let span = travel - (vh * SPONSORS_END_AT - startLine);
-      if (span < vh * MIN_SPAN) {
-        span = vh * MIN_SPAN;
-        startLine = vh * SPONSORS_END_AT - travel + span;
-      }
-      return { top0: startLine - startY, span };
-    },
+    scrollRange: scrollRangeBelow,
     // Once the ball has been scrolled into the upper part of the screen.
     autoReady: ({ startScreenY }) => startScreenY <= window.innerHeight * 0.6,
     announce: true,
+  },
+
+  // endmaze1.png, the last maze on the page, with the two bars above it. The
+  // ball rolls in from off the left edge along the lower bar
+  // (`data-ball-floor`, next to this one's parent), is launched off its end
+  // at config.end.launchSpeed, and falls through the maze onto the logo
+  // under it (`data-ball-target`), where it stays. The launch point is
+  // measured rather than configured, so it follows the bars wherever the
+  // layout puts them.
+  end: {
+    walls: "/EndMaze.svg",
+    simConfig: { ...config, route: config.end.route },
+    launch({ root, rootBox, scale, offsetX, offsetY }) {
+      const floor = root.parentElement?.querySelector("[data-ball-floor]");
+      const box = floor?.getBoundingClientRect();
+      if (!box?.width) return null;
+      // Whole maze px, so re-measuring a layout that has not moved finds the
+      // same start, and the fall already simulated for it.
+      return {
+        x: Math.round((box.right - rootBox.left - offsetX) / scale),
+        y: Math.round(
+          (box.top - rootBox.top - offsetY) / scale - config.ball.size / 2
+        ),
+        vx: config.end.launchSpeed,
+      };
+    },
+    mazeTransform(maze, rootBox) {
+      const box = maze.getBoundingClientRect();
+      const k = box.width / END_WIDTH;
+      return {
+        scale: END_SCALE * k,
+        offsetX: box.left - rootBox.left + END_OFFSET[0] * k,
+        offsetY: box.top - rootBox.top + END_OFFSET[1] * k,
+      };
+    },
+    // The logo is drawn as a CSS mask, so that is where its art is.
+    artOf: maskImageOf,
+    // Shrinks away to nothing once it has landed on the logo.
+    vanishMs: config.end.vanishMs,
+    scrollRange: scrollRangeBelow,
+    autoReady: ({ startScreenY }) => startScreenY <= window.innerHeight * 0.6,
+    announce: false,
   },
 };
 
@@ -119,8 +172,12 @@ if (typeof window !== "undefined") {
   }
   // Start fetching the walls and simulating straight away, so each fall is
   // ready long before its maze is on screen. Errors surface in the effect.
+  // One that starts from a measured point waits for the page instead.
   for (const variant of Object.values(VARIANTS)) {
-    loadFall(config, variant.start).catch(() => {});
+    if (!variant.start) continue;
+    loadFall(variant.simConfig ?? config, variant.start, variant.walls).catch(
+      () => {}
+    );
   }
 }
 
@@ -136,6 +193,22 @@ function navbarClearance() {
     bottom = Math.max(bottom, el.getBoundingClientRect().bottom);
   }
   return bottom + config.scroll.navbarMargin;
+}
+
+/* The image an element is masked with (`mask: url(...)`), loaded into an
+   <img> of its own so readAlpha can read it. One per image, shared. */
+const maskImages = new Map();
+function maskImageOf(el) {
+  const style = getComputedStyle(el);
+  const mask = style.maskImage || style.webkitMaskImage || "";
+  const url = /url\(["']?([^"')]+)["']?\)/.exec(mask)?.[1];
+  if (!url) return null;
+  if (!maskImages.has(url)) {
+    const img = new Image();
+    img.src = url;
+    maskImages.set(url, img);
+  }
+  return maskImages.get(url);
 }
 
 /* The landing artwork's alpha channel, once it has loaded. Touching it means
@@ -208,18 +281,25 @@ function findTouch(timeline, { scale, offsetX, offsetY, size }, box, art) {
 
 export default function BallFall({ variant }) {
   const svgRef = useRef(null);
+  const shrinkRef = useRef(null);
   const ballRef = useRef(null);
 
   useEffect(() => {
     const setup = VARIANTS[variant];
     const svg = svgRef.current;
+    const shrink = shrinkRef.current;
     const ball = ballRef.current;
     const root = svg?.parentElement;
-    if (!setup || !svg || !ball || !root) return;
+    if (!setup || !svg || !shrink || !ball || !root) return;
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (setup.vanishMs && !reduced.matches) {
+      shrink.style.transition = `transform ${setup.vanishMs}ms ease-in`;
+    }
     let disposed = false;
     let sim = null;
+    // Where `sim` starts, or the fall being simulated will.
+    let simStart = null;
 
     // Everything that depends on the layout: the maze's transform, the fall
     // with its last leg aimed at the landing art as it currently sits, and
@@ -230,14 +310,23 @@ export default function BallFall({ variant }) {
     let artSrc = "";
 
     const layout = () => {
-      if (!sim) return;
       const maze = root.querySelector("[data-ball-maze]");
       const rootBox = root.getBoundingClientRect();
       const mazeBox = maze?.getBoundingClientRect();
       if (!rootBox.height || !mazeBox?.height) return;
 
-      svg.setAttribute("viewBox", `0 0 ${rootBox.width} ${rootBox.height}`);
       const { scale, offsetX, offsetY } = setup.mazeTransform(maze, rootBox);
+      const start = setup.launch
+        ? setup.launch({ root, rootBox, scale, offsetX, offsetY })
+        : setup.start;
+      if (!start) return;
+      requestFall(start);
+      if (!sim) return;
+
+      svg.setAttribute("viewBox", `0 0 ${rootBox.width} ${rootBox.height}`);
+      const size = config.ball.size * scale;
+      ball.setAttribute("width", size);
+      ball.setAttribute("height", size);
 
       const target = root.querySelector("[data-ball-target]");
       const targetBox = target?.getBoundingClientRect();
@@ -248,19 +337,25 @@ export default function BallFall({ variant }) {
         ? targetBox.top - rootBox.top + targetBox.height / 2
         : rootBox.height;
 
+      // A launched ball first rolls in from just off the left edge.
+      const run = setup.launch
+        ? withRollIn(
+            sim,
+            (-size / 2 - offsetX) / scale,
+            start.vx,
+            config.ball.size / 2
+          )
+        : sim;
       const timeline = buildTimeline(
-        sim,
+        run,
         (endX - offsetX) / scale,
         (endY - offsetY) / scale
       );
-      const size = config.ball.size * scale;
-      ball.setAttribute("width", size);
-      ball.setAttribute("height", size);
 
       // Scroll pacing: `top0` is where the root's top is on screen when the
       // fall begins, `span` how much scrolling it takes.
       const clearance = navbarClearance();
-      const startY = setup.start.y * scale + offsetY;
+      const startY = start.y * scale + offsetY;
       const { top0, span } = setup.scrollRange({
         rootBox,
         startY,
@@ -280,10 +375,12 @@ export default function BallFall({ variant }) {
 
       // Where in the fall it first touches the landing art. Read the art's
       // pixels once per image it loads.
-      if (target && target.currentSrc !== artSrc) {
-        art = readAlpha(target);
-        if (art) artSrc = target.currentSrc;
-        else target.addEventListener("load", relayout, { once: true });
+      const artImage = target && (setup.artOf ? setup.artOf(target) : target);
+      const artImageSrc = artImage && (artImage.currentSrc || artImage.src);
+      if (artImage && artImageSrc !== artSrc) {
+        art = readAlpha(artImage);
+        if (art) artSrc = artImageSrc;
+        else artImage.addEventListener("load", relayout, { once: true });
       }
       const touchIndex = targetBox
         ? findTouch(
@@ -306,6 +403,7 @@ export default function BallFall({ variant }) {
         timeline,
         warp,
         size,
+        target,
         touchIndex,
         top0,
         span,
@@ -321,7 +419,8 @@ export default function BallFall({ variant }) {
     // Puts the ball at a point in the fall, given as a (fractional) sample
     // index into the timeline.
     const placeAt = (index) => {
-      const { scale, offsetX, offsetY, timeline, size } = geometry;
+      const { scale, offsetX, offsetY, timeline, size, target, touchIndex } =
+        geometry;
       const s = sampleTimeline(timeline, index);
       const x = s.x * scale + offsetX;
       const y = s.y * scale + offsetY;
@@ -331,6 +430,12 @@ export default function BallFall({ variant }) {
         "transform",
         `rotate(${s.angle * config.rotation} ${x} ${y})`
       );
+      // The art it lands on carries `data-ball-touched` while the ball is on
+      // it, for styling: the logo under the last maze lights up. A ball that
+      // vanishes shrinks away there.
+      const touched = index >= touchIndex;
+      target?.toggleAttribute("data-ball-touched", touched);
+      if (setup.vanishMs) shrink.style.transform = touched ? "scale(0)" : "";
     };
 
     // How far through its scroll range the page is, 0 to 1.
@@ -482,14 +587,32 @@ export default function BallFall({ variant }) {
       requestAnimationFrame(retry);
     };
 
-    loadFall(config, setup.start)
-      .then((fall) => {
-        if (disposed) return;
-        sim = fall;
-        relayout();
-        requestAnimationFrame(retry);
-      })
-      .catch((error) => console.error("Ball animation:", error));
+    // Gets the fall from `start` simulated, unless it already is, then lays
+    // it out. Called from layout(), since a launched ball's start is only
+    // known once the page can be measured.
+    function requestFall(start) {
+      if (
+        simStart &&
+        simStart.x === start.x &&
+        simStart.y === start.y &&
+        simStart.vx === start.vx
+      ) {
+        return;
+      }
+      simStart = start;
+      sim = null;
+      loadFall(setup.simConfig ?? config, start, setup.walls)
+        .then((fall) => {
+          if (disposed || simStart !== start) return;
+          sim = fall;
+          tries = 0;
+          relayout();
+          requestAnimationFrame(retry);
+        })
+        .catch((error) => console.error("Ball animation:", error));
+    }
+
+    relayout();
 
     let lastHeight = document.documentElement.scrollHeight;
     const settle = setInterval(() => {
@@ -527,7 +650,13 @@ export default function BallFall({ variant }) {
       className="pointer-events-none absolute inset-0 z-20 h-full w-full"
       aria-hidden="true"
     >
-      <image ref={ballRef} href={config.ball.image} width="0" height="0" />
+      {/* Scaled about the ball's centre when it vanishes. */}
+      <g
+        ref={shrinkRef}
+        style={{ transformBox: "fill-box", transformOrigin: "center" }}
+      >
+        <image ref={ballRef} href={config.ball.image} width="0" height="0" />
+      </g>
     </svg>
   );
 }

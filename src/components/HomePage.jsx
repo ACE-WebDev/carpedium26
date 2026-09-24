@@ -5,6 +5,7 @@ import Image from "next/image";
 import Navbar from "./navbar";
 import MazeBall from "./MazeBall";
 import BallFall from "./BallFall";
+import SlopeBall from "./SlopeBall";
 import CircleWipe from "./CircleWipe";
 
 
@@ -833,15 +834,19 @@ export default function HomePage() {
           <Image
             src="/capediem-maze-slanted.png"
             alt=""
-            width={600}
-            height={400}
+            width={355}
+            height={232}
+            data-ball-ceiling=""
             className="block w-[80%] h-auto object-contain"
           />
+          {/* The ball rolls down this one, under the one above, before it
+              falls off its low end behind the green wave (SlopeBall). */}
           <Image
             src="/capediem-maze-slanted-bottom.png"
             alt=""
-            width={600}
-            height={400}
+            width={293}
+            height={211}
+            data-ball-slope=""
             className="block w-[70%] h-auto object-contain ml-auto mr-[18%] mt-[-10%]"
           />
         </div>
@@ -872,8 +877,11 @@ export default function HomePage() {
           fun and celebration!
         </p>
 
+        {/* Over the text, under the grass and the wave. */}
+        <SlopeBall />
+
         {/* Grass + Green Platform */}
-        <div className="relative w-screen left-1/2 -translate-x-1/2 mt-[4vw]">
+        <div className="relative z-10 w-screen left-1/2 -translate-x-1/2 mt-[4vw]">
           <Image
             src="/carpediem-grass-row.png"
             alt=""
@@ -888,6 +896,7 @@ export default function HomePage() {
               alt=""
               width={1920}
               height={600}
+              data-ball-cover=""
               className="w-full h-auto top-[20%] object-cover pointer-events-none select-none"
             />
             <FlagshipStats />
@@ -984,32 +993,50 @@ export default function HomePage() {
             className="relative z-10 block w-[46%] aspect-[500/50] -mt-[10%] object-cover object-left pointer-events-none select-none"
           />
 
-          <Image
-            data-bar="b"
-            src="/carpediem-maze-top.png"
-            alt=""
-            width={1000}
-            height={200}
-            className="relative z-10 block w-[46%] aspect-[500/50] object-cover object-left mt-[5%] pointer-events-none select-none"
+        {/* The ball's last run rolls along the top of this bar, between it
+            and the one above, before it shoots off its end into the maze. */}
+        <Image
+          src="/carpediem-maze-top.png"
+          alt=""
+          width={1000}
+          height={200}
+          data-ball-floor=""
+          className="relative z-10 block w-[46%] aspect-[500/50] object-cover object-left mt-[5%] pointer-events-none select-none"
+        />
+
+        {/* The ball's last run: along the bars above, down through this
+            maze and onto the logo under it, which lights up as it lands. */}
+        <div className="relative -mt-[16.4%]">
+          <div className="relative w-full aspect-[1440/1000] overflow-hidden">
+            <Image
+              src="/endmaze1.png"
+              alt=""
+              width={1440}
+              height={1455}
+              data-ball-maze=""
+              className="absolute bottom-0 left-0 w-full h-auto max-w-none pointer-events-none select-none"
+            />
+            <Image
+              src="/endmaze2.png"
+              alt=""
+              width={600}
+              height={600}
+              className="absolute left-0 top-[25.0%] w-[32.92%] h-auto max-w-none pointer-events-none select-none"
+            />
+          </div>
+
+          {/* carpediem.svg is square with the logo across its middle third,
+              so this box reaches up behind the bottom of the maze and down
+              past the end of the section with nothing drawn there: the
+              margins put the logo itself just under the maze. */}
+          <div
+            data-ball-target=""
+            role="img"
+            aria-label="Carpe Diem"
+            className="home-logo relative mx-auto w-[42%] aspect-square -mt-[12%] -mb-[8%] pointer-events-none"
           />
 
-
-        <div className="relative w-full -mt-[10%] aspect-[1440/1000] overflow-hidden">
-          <Image
-            data-drop-target=""
-            src="/endmaze1.png"
-            alt=""
-            width={1920}
-            height={1080}
-            className="absolute bottom-0 left-0 w-full h-auto max-w-none pointer-events-none select-none"
-          />
-          <Image
-            src="/endmaze2.png"
-            alt=""
-            width={600}
-            height={600}
-            className="absolute left-0 top-[25.0%] w-[32.92%] h-auto max-w-none pointer-events-none select-none"
-          />
+          <BallFall variant="end" />
         </div>
 
         <BarDrop boxRef={dropRef} afterRef={spaceRef} target={{ x: 0.9, y: 0.1 }} />
