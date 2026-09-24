@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Navbar from "./navbar";
 import MazeBall from "./MazeBall";
+import BallFall from "./BallFall";
 import CircleWipe from "./CircleWipe";
 
 /* ================= DIGIT REEL (single spinning character) ================= */
@@ -98,7 +99,7 @@ function FlagshipStats() {
   return (
     <div
       ref={ref}
-      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[88%] max-w-[1350px] flex items-center justify-around z-30"
+      className=" absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[88%] max-w-[1350px] flex items-center justify-around z-30"
     >
       {stats.map((s) => (
         <div key={s.label} className="flex flex-col items-center text-center">
@@ -131,17 +132,23 @@ function FlagshipStats() {
 
 export default function HomePage() {
   const ballTargetRef = useRef(null);
-  // Everything above the Intro section is dropped once the blackout covers
-  // the screen, so the page really does begin at the Intro afterwards
-  // rather than just being scrolled past the maze.
-  const [introOnly, setIntroOnly] = useState(false);
-  const enterIntro = useCallback(() => setIntroOnly(true), []);
+  // Where the page begins. Each blackout drops everything above the section
+  // it reveals, so the page really does begin there afterwards rather than
+  // just being scrolled past what came before: "hero" is everything, then
+  // "intro" once the first ball has landed in About Us, then "sponsors" once
+  // the second has landed on the maze end above the Sponsors section.
+  const [startAt, setStartAt] = useState("hero");
+  const enterIntro = useCallback(
+    () => setStartAt((current) => (current === "hero" ? "intro" : current)),
+    []
+  );
+  const enterSponsors = useCallback(() => setStartAt("sponsors"), []);
 
   return (
-    <div className="relative w-full bg-[#EDD4A3] flex flex-col">
+    <div className="relative w-full overflow-x-clip bg-[#EDD4A3] flex flex-col">
       <Navbar />
 
-      {!introOnly && (
+      {startAt === "hero" && (
         <>
       {/* Hero Section */}
       <MazeBall
@@ -206,11 +213,18 @@ export default function HomePage() {
         </>
       )}
 
-      {/* Outside the block above on purpose: it unmounts that content
-          mid-transition, so it must not be a child of it or it would tear
-          itself down before the circle could shrink back. */}
-      <CircleWipe originRef={ballTargetRef} onCovered={enterIntro} />
+      {/* Outside the blocks they remove on purpose: each unmounts that
+          content mid-transition, so it must not be a child of it or it would
+          tear itself down before the circle could shrink back. */}
+      <CircleWipe
+        trigger="hero"
+        originRef={ballTargetRef}
+        onCovered={enterIntro}
+      />
+      <CircleWipe trigger="sponsors" onCovered={enterSponsors} />
 
+      {startAt !== "sponsors" && (
+        <>
       {/* Intro Section */}
       <section
         id="carpediem-intro"
@@ -398,46 +412,71 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+        </>
+      )}
 
-      {/* Sponsors & Maze Section */}
-      <div className="relative z-10 w-full overflow-hidden -mt-[30%]">
-        <Image
-          src="/sponsormaze1.png"
-          alt=""
-          width={1920}
-          height={1080}
-          className="block w-full h-auto scale-[1.18] origin-top pointer-events-none select-none"
-        />
+      {/* Sponsors & Maze Section. After the second blackout only the Sponsors
+          part is left: with no maze above it and nothing to overlap, it drops
+          the pull-up and starts clear of the navbar instead. */}
+      <div
+        className={`relative z-10 w-full overflow-hidden ${
+          startAt === "sponsors" ? "" : "-mt-[30%]"
+        }`}
+        style={
+          startAt === "sponsors"
+            ? { paddingTop: "calc(9vh + 64px - 3%)" }
+            : undefined
+        }
+      >
+        {startAt !== "sponsors" && (
+          <>
+            <Image
+              src="/sponsormaze1.png"
+              alt=""
+              width={1920}
+              height={1080}
+              data-ball-maze=""
+              className="block w-full h-auto scale-[1.18] origin-top pointer-events-none select-none"
+            />
 
-        <div className="relative w-full aspect-[1000/738] overflow-hidden -mt-[22%] -mb-[13%]">
-          <Image
-            src="/sponsormaze2.png"
-            alt=""
-            width={1920}
-            height={1080}
-            className="absolute -left-[14%] top-0 w-[130.9%] max-w-none h-auto scale-[1.10] origin-center pointer-events-none select-none"
-          />
-          <Image
-            src="/mazeend.png"
-            alt=""
-            width={500}
-            height={500}
-            className="absolute left-1/2 top-[65%] -translate-x-1/2 -translate-y-1/2 w-[24.9%] h-auto max-w-none pointer-events-none select-none"
-          />
-          <Image
-            src="/sponsortxt.png"
-            alt="Sponsors"
-            width={300}
-            height={300}
-            className="absolute w-[16.5%] h-auto max-w-none animate-spin motion-reduce:animate-none"
-            style={{
-              left: "42%",
-              top: "53%",
-              transformOrigin: "50.15% 71.28%",
-              animationDuration: "10s",
-            }}
-          />
-        </div>
+            <div className="relative w-full aspect-[1000/738] overflow-hidden -mt-[22%] -mb-[13%]">
+              <Image
+                src="/sponsormaze2.png"
+                alt=""
+                width={1920}
+                height={1080}
+                className="absolute -left-[14%] top-0 w-[130.9%] max-w-none h-auto scale-[1.10] origin-center pointer-events-none select-none"
+              />
+              <Image
+                src="/mazeend.png"
+                alt=""
+                width={500}
+                height={500}
+                data-ball-target=""
+                className="absolute left-1/2 top-[65%] -translate-x-1/2 -translate-y-1/2 w-[24.9%] h-auto max-w-none pointer-events-none select-none"
+              />
+              <Image
+                src="/sponsortxt.png"
+                alt="Sponsors"
+                width={300}
+                height={300}
+                className="absolute w-[16.5%] h-auto max-w-none animate-spin motion-reduce:animate-none"
+                style={{
+                  left: "42%",
+                  top: "53%",
+                  transformOrigin: "50.15% 71.28%",
+                  animationDuration: "10s",
+                }}
+              />
+            </div>
+
+            {/* The same maze again, with the ball falling through it onto the
+                maze end above, where the second blackout takes over. The top
+                of this maze is hidden under the flagship section, so this run
+                starts lower (sponsors in ballAnimation.js). */}
+            <BallFall variant="sponsors" />
+          </>
+        )}
 
         <h2 className="relative z-20 w-full mt-[3%] text-center uppercase leading-none font-normal font-['BBH_Hegarty'] text-[#1C1F2A] text-[clamp(6rem,2.9vw,56px)]">
           Sponsors

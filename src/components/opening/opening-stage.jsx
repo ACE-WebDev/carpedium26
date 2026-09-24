@@ -2,416 +2,282 @@
 
 import { useEffect, useRef, useState } from "react";
 
-// How much wheel/touch travel (in px) maps to the full zoom.
-const SCROLL_RANGE = 4000;
-const MAX_SCALE = 4;
-// Fraction of the scroll after which the photo starts being revealed
-// through the logo, so the change reads as "arriving at max zoom".
-const TINT_START = 0.45;
-// The logo finishes growing here, leaving the rest of the scroll for the
-// text to fade and the photo to expand and cover the letterforms.
-const ZOOM_END = 0.55;
-// Text has finished fading by here; the photo then breaks out of the
-// letterforms and takes over the page.
-const TAKEOVER_START = 0.8;
-// The Aranya text fades from the first scroll and is gone by here.
-const TEXT_FADE_END = 0.25;
+/*
+ * The opening: a cover over the site with the CARPEDIEM wordmark cut out of
+ * it, so the site — mounted underneath from the start — shows through the
+ * letters like a window. Scrolling flies you through that window: the
+ * wordmark zooms in on one letter and slides it to the middle of the screen,
+ * the rest of the letters sweeping past and off the edges, until that letter
+ * fills the screen and there is nothing left of the cover. The page itself
+ * is held at the top meanwhile (opening.css), so you land on the hero.
+ *
+ * The cover is one SVG path — a sheet far bigger than the screen with the
+ * wordmark in it — filled `evenodd`, so the letters are holes, and stroked,
+ * which draws the letters' borders. Zooming only changes that path's
+ * transform, so the letters stay sharp at any size.
+ */
+
+// carpediem.svg's artwork box inside its 1095-square canvas (x, y, width,
+// height). The svg below is cropped to it; --logo-ratio in opening.css is
+// the same box's width / height.
+const LOGO_BOX = [51.3, 391.5, 1037.2, 333.38];
+
+// The point the zoom flies through, in carpediem.svg units: the thickest
+// spot in the wordmark, in the top-left of the D, and how far it is from the
+// letter's nearest edge (measured at 38.8; kept a little under). Found with
+// a distance map of the letters — re-measure if the artwork changes.
+const FLY_THROUGH = { x: 649.3, y: 432.5, radius: 36 };
+
+// Far enough out in every direction to cover any screen, even at rest.
+const SHEET = "M-20000 -20000H20000V20000H-20000Z";
+
 // ---------------------------------------------------------------------
-// TUNE THE PHOTO'S FADE-IN HERE. This is the photo appearing inside the
-// letterforms, and is separate from the logo's own fade-out.
-// FADE_IN_AT   - where the photo starts appearing.
-// FADE_IN_SPAN - how long the fade takes; smaller is sharper.
-//   0.10 / 0.35 = early and gradual
-//   0.20 / 0.20 = balanced
-//   0.30 / 0.08 = late and sharp
-const FADE_IN_AT = 0.1;
-const FADE_IN_SPAN = 0.13;
-// ---------------------------------------------------------------------
-// ---------------------------------------------------------------------
-// TUNE THE STARTING SIZE HERE.
-// How big the photo is inside the letterforms at rest. Smaller = the
-// photo starts as a tighter close-up and has further to grow.
-//   0.15 = very small
-//   0.25 = small
-//   0.35 = moderate
-const PHOTO_MIN = 0.02;
-// ---------------------------------------------------------------------
-// How big it has grown by the time the letterforms release it. The
-// release now starts from exactly this value rather than snapping to 1,
-// so any value animates smoothly; but below 1 the photo does not quite
-// fill the letterforms, so the glyphs show their edges just before the
-// release. 1 fills them exactly.
-const PHOTO_MAX = 0.6;
-// ---------------------------------------------------------------------
-// TUNE WHICH PART OF THE PICTURE SHOWS THROUGH THE LETTERFORMS HERE.
-// This slides the image behind the mask; the mask itself does not move,
-// so the glyphs stay put and simply frame a different part of the photo.
-// A percentage of the image's own height, applied in opening-photo.jsx.
-// NEGATIVE MOVES THE IMAGE UP.
-//   -25% = well up
-//   -12% = up a little
-//     0% = centred in the letterforms
-const PHOTO_NUDGE = "-12%";
-// ---------------------------------------------------------------------
-// TUNE THE FINAL ZOOM-OUT HERE.
-// How much the photo swells past its released size before easing back to
-// 1, which fills the hero box exactly. This is a multiplier on PHOTO_MAX,
-// not an absolute scale, so the motion continues from wherever the photo
-// already is instead of jumping.
-//   1.0 = no zoom-out at all
-//   1.4 = gentle
-//   1.8 = pronounced
-//   2.5 = dramatic
-// Clamped to >= 1 below, so it can only overshoot: the photo always
-// covers the box and no empty edges can appear, whatever value you pick.
-const ZOOM_OUT_FROM = 0.2;
+// TUNE THE FLY-THROUGH HERE.
+// How much scrolling it takes, in wheel/trackpad px.
+const SCROLL_RANGE = 2400;
+// A swipe travels less than a wheel does; this scales swipes up to match.
+const TOUCH_BOOST = 2.5;
+// How long the zoom takes to catch up with the scrolling, in ms. Higher
+// glides more; lower follows the wheel more tightly.
+const SMOOTHING_MS = 120;
+// How far through (0–1) the Aranya text has faded out by.
+const TEXT_FADE_END = 0.2;
+// How far through (0–1) the letter has slid to the middle of the screen.
+const SLIDE_END = 0.7;
+// From here to the end (0–1) the cover also fades out, in case a sliver of
+// it is still in view on an unusually shaped screen.
+const FADE_FROM = 0.93;
+// Once through, the page stays held this much longer (ms), so trackpad
+// momentum does not carry it straight on past the hero.
+const SETTLE_MS = 500;
 // ---------------------------------------------------------------------
 
-// How long the opening and what follows crossfade for. Keep in step with
-// the duration on the two fading elements below.
-const CROSSFADE_MS = 700;
+const KEY_STEPS = {
+  ArrowDown: 100,
+  ArrowUp: -100,
+  PageDown: 600,
+  PageUp: -600,
+  " ": 600,
+  End: SCROLL_RANGE,
+  Home: -SCROLL_RANGE,
+};
 
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
+const smoothstep = (v) => v * v * (3 - 2 * v);
 
-export default function OpeningStage({ chrome, photo, after }) {
+export default function OpeningStage({ logoPath, text, children }) {
   const stageRef = useRef(null);
-  // The handover runs in two steps so the two halves can crossfade:
-  //   "playing"  - the opening alone.
-  //   "handover" - both mounted; the opening fades out while what follows
-  //                fades in underneath it.
-  //   "done"     - the opening is unmounted for good.
-  const [phase, setPhase] = useState("playing");
-  const done = phase === "done";
-  const handingOver = phase === "handover";
-  // Survives the effect re-running (Strict Mode remounts in dev), so a
-  // finished opening can never re-arm itself.
-  const finishedRef = useRef(false);
+  const svgRef = useRef(null);
+  const coverRef = useRef(null);
+  // Once through, `opening-done` goes on <body> for anything waiting on the
+  // opening (the hero's ball), and the cover is removed for good a moment
+  // later.
+  const [done, setDone] = useState(false);
 
   useEffect(() => {
     const stage = stageRef.current;
-    if (!stage) return;
-    if (finishedRef.current) return;
+    const svg = svgRef.current;
+    const cover = coverRef.current;
+    if (!stage || !svg || !cover) return;
 
-    // Reduced motion skips the scroll-driven animation entirely. The
-    // opening still has to hand over, or the rest of the site would never
-    // mount, so settle straight into the finished state. This has to run
-    // here rather than in a useState initializer: the server cannot read
-    // matchMedia, so deciding it during render would break hydration.
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (reduced.matches) {
-      finishedRef.current = true;
+    // Reduced motion skips the fly-through; the cover is already hidden by
+    // opening.css, this takes it away. A one-shot handover on mount, not a
+    // render loop.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       document.body.classList.add("opening-done");
-      // Straight to done, with no crossfade to animate.
-      // A one-shot handover, not a render loop: finishedRef stops it re-running.
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPhase("done");
+      setDone(true);
       return;
     }
 
-    // The page never actually scrolls, so we accumulate scroll intent
-    // ourselves and clamp it to the animation range.
-    let travel = 0;
-    let frame = 0;
-    // Pending unmount of the opening once the crossfade has run.
-    let fadeTimer = 0;
+    // The fly-through always lands on the hero, so start from the top, even
+    // on a reload that would restore an earlier scroll position.
+    document.body.classList.remove("opening-done");
+    history.scrollRestoration = "manual";
+    window.scrollTo(0, 0);
 
-    // The bounce is only an idle-state effect. Let the real zoom state,
-    // rather than raw wheel/touch input, decide when it ends.
-    const stopIntroBounce = () => {
-      stage.classList.add("opening-has-scrolled");
+    // Where the fly-through point is at rest and how far it slides to the
+    // middle of the screen (both in svg units), and how far it zooms: until
+    // the letter around it covers the screen corner to corner.
+    let geometry = null;
+    const measure = () => {
+      const box = svg.getBoundingClientRect();
+      const view = stage.getBoundingClientRect();
+      const k = box.width / LOGO_BOX[2]; // screen px per svg unit, at rest
+      geometry = {
+        slideX:
+          (view.left + view.width / 2 - box.left) / k -
+          (FLY_THROUGH.x - LOGO_BOX[0]),
+        slideY:
+          (view.top + view.height / 2 - box.top) / k -
+          (FLY_THROUGH.y - LOGO_BOX[1]),
+        maxScale:
+          (1.1 * Math.hypot(view.width, view.height)) /
+          2 /
+          (FLY_THROUGH.radius * k),
+      };
     };
 
-    // The wordmark is laid out by space-around, so its centre sits above
-    // the viewport's. Measure the gap so the freed photo can start there
-    // instead of jumping to the middle of the screen.
-    const logo = stage.querySelector(".opening-logo");
-    const measureOffset = () => {
-      if (!logo) return 0;
-      // Deliberately offsetTop/offsetHeight rather than
-      // getBoundingClientRect: these are layout geometry and ignore every
-      // transform on the element and its ancestors. The rect would instead
-      // be measured through the live --zoom *and* the entrance animations
-      // (.opening-logo-intro starts a viewport above, .opening-logo-bounce
-      // adds a further nudge), so on mount it reports the wordmark while it
-      // is still off-screen - which put the photo far from the mask until
-      // something re-measured and snapped it back.
-      let top = 0;
-      for (let el = logo; el && el !== stage; el = el.offsetParent) {
-        top += el.offsetTop;
-      }
-      return top + logo.offsetHeight / 2 - stage.clientHeight / 2;
-    };
-    let logoDy = measureOffset();
-
-    // The webfont changes the text block's height, which moves the
-    // wordmark under space-around, so re-measure once fonts settle.
-    if (document.fonts?.ready) {
-      document.fonts.ready.then(() => {
-        logoDy = measureOffset();
-        render();
-      });
-    }
-
-    // The wordmark's own box can still settle after that - the inlined SVG
-    // sizing, or any late layout shift. Track it directly so --photo-dy
-    // follows the layout instead of being fixed by one early reading.
-    const observer =
-      typeof ResizeObserver === "undefined"
-        ? null
-        : new ResizeObserver(() => {
-            logoDy = measureOffset();
-            render();
-          });
-    if (observer && logo) observer.observe(logo);
+    let shown = 0; // how far through, 0–1, as drawn
+    let target = 0; // …and as scrolled to
 
     const render = () => {
+      const { slideX, slideY, maxScale } = geometry;
+      const { x, y } = FLY_THROUGH;
+      const slide = smoothstep(clamp01(shown / SLIDE_END));
+      // Zooming by a constant factor per step of scrolling reads as moving
+      // towards it at a steady speed.
+      const scale = maxScale ** shown;
+      cover.setAttribute(
+        "transform",
+        `translate(${x + slideX * slide} ${y + slideY * slide}) scale(${scale}) translate(${-x} ${-y})`,
+      );
+      stage.style.setProperty(
+        "--text-fade",
+        String(1 - clamp01(shown / TEXT_FADE_END)),
+      );
+      stage.style.opacity = String(
+        1 - clamp01((shown - FADE_FROM) / (1 - FADE_FROM)),
+      );
+    };
+
+    let frame = 0;
+    let lastTime = 0;
+    let finished = false;
+    let settleTimer = 0;
+
+    // Glides `shown` towards `target`, so a notched wheel still zooms
+    // smoothly rather than in jumps.
+    const tick = (now) => {
       frame = 0;
-      const t = travel / SCROLL_RANGE; // 0 -> 1
-      const zoom = clamp01(t / ZOOM_END);
-      if (zoom > 0) stopIntroBounce();
-      // The photo has filled the letterforms by the time the mask starts
-      // releasing, so the growth reads as one continuous expansion.
-      const tint = clamp01((t - TINT_START) / (TAKEOVER_START - TINT_START));
-      // Fade the solid letterforms out to reveal the photo behind them.
-      const cover = 1 - tint;
-      // Text starts fading from the very first scroll, and is gone well
-      // before the photo takes over.
-      const fade = 1 - clamp01(t / TEXT_FADE_END);
-      const takeover = clamp01((t - TAKEOVER_START) / (1 - TAKEOVER_START));
-
-      stage.style.setProperty("--zoom", String(1 + zoom * (MAX_SCALE - 1)));
-      // The wordmark sits above the viewport's centre (space-around), so
-      // as it zooms it also slides down onto that centre - the same point
-      // the photo is growing towards. Reuses the gap measureOffset()
-      // already computes, negated because logoDy is the wordmark's centre
-      // relative to the stage's: moving *down* by it lands on the middle.
-      // Divided by the live scale because this transform is composed
-      // after scale() on the same element, so the translate is drawn in
-      // the scaled coordinate system and would otherwise overshoot by
-      // that factor.
-      const logoScale = 1 + zoom * (MAX_SCALE - 1);
-      stage.style.setProperty(
-        "--logo-dy",
-        `${(-logoDy * zoom) / logoScale}px`,
-      );
-      stage.style.setProperty("--fade", String(fade));
-      stage.style.setProperty("--drift", `${(1 - fade) * 60}px`);
-      stage.style.setProperty("--cover", String(cover));
-      // The photo's own fade-in, independent of the logo's fade-out.
-      stage.style.setProperty(
-        "--photo-in",
-        String(clamp01((t - FADE_IN_AT) / FADE_IN_SPAN)),
-      );
-      stage.style.setProperty("--takeover", String(takeover));
-      // Slide the picture behind the mask. The mask does not move, so this
-      // only changes which part of the photo the glyphs frame. Scaled by
-      // (1 - takeover) so it eases back to 0 as the photo is released and
-      // the full-screen image ends up centred, not carrying the offset.
-      stage.style.setProperty(
-        "--photo-nudge",
-        `calc(${PHOTO_NUDGE} * ${1 - takeover})`,
-      );
-      // Inside the letterforms the photo grows from small to PHOTO_MAX.
-      const inMask = PHOTO_MIN + tint * (PHOTO_MAX - PHOTO_MIN);
-      // On release it eases to exactly 1, which fills the clip - and the
-      // clip is by then the same box HomePage paints its hero into, so the
-      // two match when they cross over.
-      //
-      // The release starts from wherever the photo actually is (inMask at
-      // the moment takeover begins, i.e. PHOTO_MAX), never from a separate
-      // constant: starting anywhere else would make the scale jump on the
-      // frame takeover starts. ZOOM_OUT_FROM only says how much *bigger*
-      // than that it swells first, so the growth carries through the
-      // release instead of stopping dead. Clamped to >= 1 so it can only
-      // ever overshoot, never shrink and reveal empty edges.
-      const overshoot = Math.max(ZOOM_OUT_FROM, 1);
-      const from = PHOTO_MAX * overshoot;
-      // Ease out, so it decelerates into its final size rather than
-      // arriving at full speed.
-      const ease = 1 - (1 - takeover) * (1 - takeover);
-      stage.style.setProperty(
-        "--photo-scale",
-        String(
-          takeover === 0 ? inMask : from + ease * (1 - from),
-        ),
-      );
-      // The clip box grows to the hero box as the mask releases, so its
-      // own scale eases 4x -> 1x to keep the motion continuous. It shares
-      // the photo's easing, so the box and the picture inside it settle
-      // together rather than one arriving before the other.
-      stage.style.setProperty(
-        "--clip-zoom",
-        String(1 + zoom * (MAX_SCALE - 1) * (1 - ease)),
-      );
-      // Start on the wordmark's centre, ease to the viewport's, so the
-      // photo slides into place as it fills the screen.
-      //
-      // This has to track where the wordmark *actually ends up*, not just
-      // where layout puts it, or the mask slides off the letterforms.
-      // Two corrections, both essential:
-      //
-      //  - `+ logoDy * zoom`: the logo also slides down by --logo-dy as it
-      //    zooms (see above). Without this the photo stays behind at the
-      //    layout position while the letterforms move, so raising or
-      //    lowering the logo (--logo-offset) pulled the two apart.
-      //    --logo-dy is -logoDy*zoom/scale in the logo's own scaled space,
-      //    which lands it logoDy*zoom further down on screen.
-      //  - `/ clipZoom`: this value is consumed inside a translate that is
-      //    composed after scale(var(--clip-zoom)) on the clip, so it is
-      //    drawn in that scaled space and would otherwise overshoot by up
-      //    to MAX_SCALE. The logo's own descent divides by its scale for
-      //    exactly the same reason.
-      const clipZoom = 1 + zoom * (MAX_SCALE - 1) * (1 - ease);
-      const logoCentre = logoDy + logoDy * zoom * (ease - 1);
-      stage.style.setProperty(
-        "--photo-dy",
-        `${(logoCentre * (1 - ease)) / clipZoom}px`,
-      );
+      const dt = lastTime ? Math.min(now - lastTime, 50) : 16;
+      lastTime = now;
+      shown += (target - shown) * (1 - Math.exp(-dt / SMOOTHING_MS));
+      if (Math.abs(target - shown) < 0.0005) shown = target;
+      render();
+      if (shown >= 1) finish();
+      else if (shown !== target) frame = requestAnimationFrame(tick);
+      else lastTime = 0;
     };
 
-    // Paint the true t=0 state before the first scroll. Without this the
-    // opening's first frame uses the CSS defaults, and the measured
-    // --photo-dy in particular is not applied until something else calls
-    // render(), so the photo shows up briefly in the wrong place.
-    render();
-
-    const advance = (delta) => {
-      const next = Math.min(SCROLL_RANGE, Math.max(0, travel + delta));
-      if (next === travel) return;
-      travel = next;
-      if (!frame) frame = requestAnimationFrame(render);
+    const advance = (px) => {
+      if (finished) return;
+      target = clamp01(target + px / SCROLL_RANGE);
+      if (!frame) frame = requestAnimationFrame(tick);
     };
 
-    // Finishing is one-way: the body scroll-lock is released, the scroll
-    // hijacking stops for good, and the opening crossfades into what comes
-    // next before unmounting. There is no going back.
+    // One-way: what was waiting on the opening starts, and the cover (fully
+    // faded by now) goes a moment later, releasing the page. Scrolling back
+    // up after that just scrolls the page.
     const finish = () => {
-      if (finishedRef.current) return;
-      finishedRef.current = true;
-      detachScrollHandlers();
-      // Mount what follows and start both fades on the same frame.
-      setPhase("handover");
-      // Unmount the opening only once its fade has finished, so the photo
-      // is never pulled out from under the crossfade. The body scroll-lock
-      // is released at the same moment, not at the start of the fade: the
-      // page must not be scrollable while the crossfade is still running,
-      // or it would slide under the stage mid-fade.
-      fadeTimer = window.setTimeout(() => {
-        document.body.classList.add("opening-done");
-        setPhase("done");
-      }, CROSSFADE_MS);
-    };
-    const syncDone = () => {
-      if (travel >= SCROLL_RANGE) finish();
+      finished = true;
+      document.body.classList.add("opening-done");
+      // Staying mounted meanwhile keeps the page held (opening.css), which
+      // swallows trackpad momentum, and keeps a swipe that is still going on
+      // targeted at the cover: removed mid-swipe, the rest of the swipe would
+      // go straight to the page and scroll it.
+      settleTimer = window.setTimeout(() => {
+        detach();
+        setDone(true);
+      }, SETTLE_MS);
     };
 
     const onWheel = (e) => {
       e.preventDefault();
-      advance(e.deltaY);
-      syncDone();
+      // Wheel deltas come in px, lines or pages depending on the device.
+      const unit =
+        e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? window.innerHeight : 1;
+      advance(e.deltaY * unit);
     };
 
-    let lastTouchY = null;
+    let touchY = null;
     const onTouchStart = (e) => {
-      lastTouchY = e.touches[0].clientY;
+      touchY = e.touches[0].clientY;
     };
     const onTouchMove = (e) => {
-      if (lastTouchY === null) return;
-      const y = e.touches[0].clientY;
-      const dy = lastTouchY - y;
-      advance(dy);
-      lastTouchY = y;
       e.preventDefault();
-      syncDone();
+      if (touchY === null) return;
+      const y = e.touches[0].clientY;
+      advance((touchY - y) * TOUCH_BOOST);
+      touchY = y;
     };
     const onTouchEnd = () => {
-      lastTouchY = null;
+      touchY = null;
     };
 
     const onKeyDown = (e) => {
-      if (e.key === "ArrowDown" || e.key === "PageDown" || e.key === " ") {
-        advance(e.key === "ArrowDown" ? 80 : 400);
-      } else if (e.key === "ArrowUp" || e.key === "PageUp") {
-        advance(e.key === "ArrowUp" ? -80 : -400);
-      } else if (e.key === "Home") {
-        advance(-SCROLL_RANGE);
-      } else if (e.key === "End") {
-        advance(SCROLL_RANGE);
-      }
-      syncDone();
+      if (finished || e.altKey || e.ctrlKey || e.metaKey) return;
+      const step = KEY_STEPS[e.key];
+      if (step === undefined) return;
+      e.preventDefault();
+      advance(e.key === " " && e.shiftKey ? -step : step);
     };
 
     const onResize = () => {
-      logoDy = measureOffset();
+      if (finished) return;
+      measure();
       render();
     };
 
-    // Only the scroll hijacking is torn down on finish; the resize
-    // listener stays so the layout keeps up afterwards.
-    function detachScrollHandlers() {
+    function detach() {
       window.removeEventListener("wheel", onWheel);
       window.removeEventListener("touchstart", onTouchStart);
       window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("touchcancel", onTouchEnd);
       window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("resize", onResize);
     }
 
-    window.addEventListener("resize", onResize);
+    measure();
+    render();
     window.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("touchstart", onTouchStart, { passive: true });
     window.addEventListener("touchmove", onTouchMove, { passive: false });
     window.addEventListener("touchend", onTouchEnd, { passive: true });
+    window.addEventListener("touchcancel", onTouchEnd, { passive: true });
     window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("resize", onResize);
 
     return () => {
       if (frame) cancelAnimationFrame(frame);
-      if (fadeTimer) clearTimeout(fadeTimer);
-      observer?.disconnect();
-      // The opening has finished (or was torn down mid-crossfade, which
-      // cancels the pending unmount above) - either way it must end up
-      // unlocked, or the page would stay scroll-locked for good. Only an
-      // unfinished opening still owns the lock.
-      if (finishedRef.current) {
-        document.body.classList.add("opening-done");
-      } else {
-        document.body.classList.remove("opening-done");
-      }
-      window.removeEventListener("resize", onResize);
-      detachScrollHandlers();
+      clearTimeout(settleTimer);
+      detach();
     };
   }, []);
 
-  // The opening hands over completely: once the crossfade has run the
-  // whole stage, photo included, is gone and only what follows is left.
-  if (done) return after;
-
   return (
     <>
-      {/* Mounted a crossfade early, underneath the opening, so it is
-          already painted and fading up as the opening fades out. */}
-      {handingOver && (
+      {children}
+      {!done && (
+        // Above the navbar (z-50) and the blackout (z-60), so everything is
+        // covered apart from what shows through the letters. It also takes
+        // the pointer, so nothing behind the letters can be clicked yet.
         <div
-          className="animate-[opening-fade-in_700ms_ease-out_forwards] opacity-0"
-          style={{ animationDuration: `${CROSSFADE_MS}ms` }}
+          ref={stageRef}
+          aria-hidden="true"
+          className="opening fixed inset-0 z-[70] h-[100dvh] w-full overflow-hidden"
         >
-          {after}
+          <svg
+            ref={svgRef}
+            viewBox={LOGO_BOX.join(" ")}
+            className="opening-logo absolute overflow-visible"
+          >
+            <path
+              ref={coverRef}
+              className="opening-cover"
+              d={SHEET + logoPath}
+              vectorEffect="non-scaling-stroke"
+            />
+          </svg>
+          <div
+            className="opening-text absolute inset-x-0 flex flex-col items-center"
+            style={{ opacity: "var(--text-fade, 1)" }}
+          >
+            {text}
+          </div>
         </div>
       )}
-      {/* `opening` stays as the hook the custom-property defaults and the
-          mask geometry attach to; the rest is utilities. On handover it
-          sits on top, fades to nothing, and stops taking pointer events. */}
-      <div
-        className={`opening fixed inset-0 z-30 h-[100dvh] w-full overflow-hidden bg-[#EFD4A3] ${
-          handingOver
-            ? "pointer-events-none animate-[opening-fade-out_700ms_ease-out_forwards]"
-            : ""
-        }`}
-        style={handingOver ? { animationDuration: `${CROSSFADE_MS}ms` } : undefined}
-        ref={stageRef}
-      >
-        {chrome}
-        {photo}
-      </div>
     </>
   );
 }

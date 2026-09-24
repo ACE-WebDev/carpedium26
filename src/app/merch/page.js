@@ -5,7 +5,8 @@ import Opening from "@/components/opening";
 export default function MerchPage() {
   return (
     <>
-      {/* HomePage is mounted by the opening once its animation finishes. */}
+      {/* The opening plays over the merch page, which is mounted underneath
+          it from the start and shows through its letters. */}
       <Opening>
         <Navbar />
         <Merch />

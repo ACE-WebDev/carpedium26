@@ -5,7 +5,8 @@ import Footer from "@/components/Footer";
 export default function Home() {
   return (
     <main>
-      {/* HomePage is mounted by the opening once its animation finishes. */}
+      {/* The opening plays over HomePage, which is mounted underneath it
+          from the start and shows through its letters. */}
       <Opening>
         <HomePage />
         <Footer />
