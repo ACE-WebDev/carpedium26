@@ -46,11 +46,15 @@ const SPONSORS_START_AT = 0.3;
 const SPONSORS_END_AT = 0.6;
 const SPONSORS_MIN_SPAN = 0.45;
 
+/* Both runs drop from the same spot at the top of the maze, so they play the
+   very same fall (simulated once, see loadFall). */
+const START = { x: config.ball.startX, y: config.ball.startY };
+
 const VARIANTS = {
   // maze.png drawn `xMidYMin slice` over the hero; the fall starts at the top
   // of the page and ends in About Us, where the blackout takes over.
   hero: {
-    start: { x: config.ball.startX, y: config.ball.startY },
+    start: START,
     mazeTransform(maze, rootBox) {
       const box = maze.getBoundingClientRect();
       const scale = Math.max(box.width / VB_W, box.height / VB_H);
@@ -72,11 +76,11 @@ const VARIANTS = {
   },
 
   // sponsormaze1.png, drawn at its own size and position further down the
-  // page; its top is hidden under the flagship section, so the fall starts
-  // lower. It ends on the maze end, where the second blackout takes over and
-  // moves on to the Sponsors section.
+  // page: the same fall from the top of the maze, ending on the maze end,
+  // where the second blackout takes over and moves on to the Sponsors
+  // section.
   sponsors: {
-    start: { x: config.sponsors.startX, y: config.sponsors.startY },
+    start: START,
     mazeTransform(maze, rootBox) {
       const box = maze.getBoundingClientRect(); // includes its scale-[1.18]
       const k = box.width / SPONSORS_WIDTH;

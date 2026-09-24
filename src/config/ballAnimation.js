@@ -21,7 +21,8 @@ const ballAnimation = {
     // decides what gaps it fits through: much above ~70 and it will jam in
     // the route's narrowest gaps.
     size: 60,
-    // Where it sits before it starts to fall, in maze px. The maze is 2344
+    // Where it sits before it starts to fall, in maze px — in both mazes,
+    // the hero and the one above the Sponsors section. The maze is 2344
     // wide and its centre line is x=1172; smaller x is further left. Anything
     // from ~990 to ~1150 drops cleanly onto the first arc; keep it above
     // ~950 or phones (which only show the middle of the maze) crop it off.
@@ -72,20 +73,6 @@ const ballAnimation = {
     // How far ahead along the route it aims, in maze px. Longer cuts corners
     // more smoothly; shorter follows every turn more exactly.
     lookahead: 80,
-  },
-
-  // The second run through the same maze, above the Sponsors section. Its
-  // top is hidden under the flagship section, so the ball starts lower —
-  // just below that edge, above the second arc — and lands on the maze end,
-  // where the second blackout takes over and moves on to the Sponsors
-  // section. Everything else (physics, spin, mode, following, blackout) is
-  // shared with the first run.
-  sponsors: {
-    // Where it starts, in maze px (same maze as above). The visible part of
-    // this maze begins at y≈508; start at least a ball's radius below that
-    // or it starts hidden under the flagship section.
-    startX: 832,
-    startY: 558,
   },
 
   auto: {
