@@ -6,6 +6,7 @@ import Navbar from "./navbar";
 import MazeBall from "./MazeBall";
 import CircleWipe from "./CircleWipe";
 
+
 /* ================= DIGIT REEL (single spinning character) ================= */
 function DigitReel({ digit, spinning }) {
   const reelDigits = "0123456789";
@@ -318,7 +319,7 @@ function BallTrack({ className = "", trailColor = "#C28B5B" }) {
 
 /* ================= BALL RUN over a single maze image (serpentine lanes) ================= */
 function MazeRun({
-  boxRef,
+  boxRef,          
   srcWidth,
   lanes,
   corridor,
@@ -391,9 +392,9 @@ function MazeRun({
       const pt = path.getPointAtLength(len);
       const roll = (pt.x / geo.r) * (180 / Math.PI);
 
-      ball.setAttribute("transform", `translate(${pt.x} ${pt.y}) rotate(${roll})`);
-      const trailLen = Math.max(0, len - geo.r * 1.2);
-      trail.style.strokeDashoffset = String(total - trailLen);
+     ball.setAttribute("transform", `translate(${pt.x} ${pt.y}) rotate(${roll})`);
+     const trailLen = Math.max(0, len - geo.r * 1.2);
+     trail.style.strokeDashoffset = String(total - trailLen);
     };
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(update);
@@ -441,7 +442,6 @@ function MazeRun({
     </svg>
   );
 }
-
 export default function HomePage() {
   const SPACE_LANES = [270, 600];
   const spaceRef = useRef(null);
@@ -744,7 +744,7 @@ export default function HomePage() {
             data-run=""
             src="/sponsorsection.png"
             alt=""
-            width={1920}
+            width={1920}  
             height={1080}
             unoptimized
             className="block w-full h-auto scale-x-[1.25] scale-y-[0.85] pointer-events-none select-none"
