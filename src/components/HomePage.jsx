@@ -467,9 +467,8 @@ export default function HomePage() {
         <>
       {/* Hero Section */}
       <MazeBall
-        heroClassName="h-[150vh]"
         hero={
-        <section className="relative h-screen w-full flex flex-col items-center justify-start pt-32">
+        <section className="relative h-[min(100vh,100%)] w-full flex flex-col items-center justify-start pt-32">
           <button
             onClick={() =>
               document

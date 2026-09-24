@@ -6,6 +6,14 @@
 export const VB_W = 2344;
 export const VB_H = 1731;
 
+/* The part of maze.png the hero shows, in maze.png px. It is framed the way
+   the Sponsors section shows the same maze (sponsormaze1.png at 118% of the
+   width): a little of each side cropped and a little room above, centred on
+   the maze's centre line — and, like that one, sized by the screen's width,
+   so the whole maze fits on any screen rather than being cropped to fill a
+   fixed-height box. */
+export const HERO_VIEW = { x: 158, y: -100, width: 2028, height: 1831 };
+
 const WARP_STEPS = 400;
 
 /* The whole fall in maze units: the simulated run through the maze, then a
