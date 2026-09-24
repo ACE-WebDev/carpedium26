@@ -4,8 +4,7 @@ import { useEffect, useRef } from "react";
 import config from "@/config/ballAnimation";
 import { loadFall } from "./mazeBallPhysics";
 import {
-  VB_H,
-  VB_W,
+  HERO_VIEW,
   buildTimeline,
   buildWarp,
   indexAt,
@@ -39,36 +38,41 @@ const SPONSORS_OFFSET = [6, 87];
 
 /* How the Sponsors fall is paced against scroll: it starts once the ball
    has been scrolled up to START_AT of the way down the screen, and lands with
-   the maze end at END_AT. On small screens the whole maze fits in view, which
-   would leave next to no scrolling for it, so it always gets at least
-   MIN_SPAN of a screen height. */
+   the maze end at END_AT. */
 const SPONSORS_START_AT = 0.3;
 const SPONSORS_END_AT = 0.6;
-const SPONSORS_MIN_SPAN = 0.45;
+/* On small screens a whole maze fits in view, which would leave next to no
+   scrolling for its fall, so each always gets at least this much of a screen
+   height. */
+const MIN_SPAN = 0.45;
 
 /* Both runs drop from the same spot at the top of the maze, so they play the
    very same fall (simulated once, see loadFall). */
 const START = { x: config.ball.startX, y: config.ball.startY };
 
 const VARIANTS = {
-  // maze.png drawn `xMidYMin slice` over the hero; the fall starts at the top
-  // of the page and ends in About Us, where the blackout takes over.
+  // maze.png framed by HERO_VIEW across the hero's full width (MazeBall);
+  // the fall starts at the top of the page and ends in About Us, where the
+  // blackout takes over.
   hero: {
     start: START,
     mazeTransform(maze, rootBox) {
       const box = maze.getBoundingClientRect();
-      const scale = Math.max(box.width / VB_W, box.height / VB_H);
+      const scale = box.width / HERO_VIEW.width;
       return {
         scale,
-        offsetX: box.left - rootBox.left + (box.width - VB_W * scale) / 2,
-        offsetY: box.top - rootBox.top,
+        offsetX: box.left - rootBox.left - HERO_VIEW.x * scale,
+        offsetY: box.top - rootBox.top - HERO_VIEW.y * scale,
       };
     },
     // From the hero's top at the top of the viewport to the bottom of About
     // Us at its bottom.
     scrollRange: ({ rootBox }) => ({
       top0: 0,
-      span: rootBox.height - window.innerHeight,
+      span: Math.max(
+        rootBox.height - window.innerHeight,
+        window.innerHeight * MIN_SPAN
+      ),
     }),
     // Once the opening sequence has handed over to the page.
     autoReady: () => document.body.classList.contains("opening-done"),
@@ -95,8 +99,8 @@ const VARIANTS = {
       const travel = targetY - startY;
       let startLine = Math.max(vh * SPONSORS_START_AT, minStartLine);
       let span = travel - (vh * SPONSORS_END_AT - startLine);
-      if (span < vh * SPONSORS_MIN_SPAN) {
-        span = vh * SPONSORS_MIN_SPAN;
+      if (span < vh * MIN_SPAN) {
+        span = vh * MIN_SPAN;
         startLine = vh * SPONSORS_END_AT - travel + span;
       }
       return { top0: startLine - startY, span };
