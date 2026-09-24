@@ -31,6 +31,22 @@ nav {
     -webkit-mask: url("./opening/carpediem.svg") center / contain no-repeat;
     mask: url("./opening/carpediem.svg") center / contain no-repeat;
 }
+
+
+/* The logo under the last maze (sized and placed in HomePage). It all but
+   blends into the page until the ball lands on it, when BallFall gives it
+   data-ball-touched. */
+.home-logo {
+    background-color: rgba(239, 212, 163, 1);
+    transition: background-color 500ms ease;
+    -webkit-mask: url("./opening/carpediem.svg") center / contain no-repeat;
+    mask: url("./opening/carpediem.svg") center / contain no-repeat;
+}
+
+.home-logo[data-ball-touched] {
+    background-color: #C28B5B;
+}
+
 .oval-nav{
     
     padding: 0px;
