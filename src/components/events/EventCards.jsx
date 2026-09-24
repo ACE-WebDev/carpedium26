@@ -146,7 +146,7 @@ const styles = `
     flex-direction: column;
     gap: 8px;
     background: linear-gradient(160deg, #2a1e10 0%, #1a1208 60%, #0e0c08 100%);
-    color: rgba(194, 139, 91, 0.45);
+    color: rgba(194, 139, 91, 0.55);
     font-family: 'Georgia', serif;
     font-size: clamp(10px, 1vw, 13px);
     letter-spacing: 0.1em;
@@ -279,7 +279,7 @@ export default function EventCards({ events = [], isSearching = false }) {
 
         {events.length === 0 ? (
           <p style={{
-            color: 'rgba(239,212,163,0.4)',
+            color: 'rgba(239, 212, 163, 0.45)',
             textAlign: 'center',
             fontFamily: 'Georgia, serif',
             fontSize: '15px',
