@@ -2,26 +2,33 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
+import config from "@/config/ballAnimation";
 
 /*
- * The scene change between About Us and the Intro section.
+ * A scene change, played when a maze ball lands: `trigger` names which one
+ * (the BallFall variant — "hero" lands in About Us, "sponsors" on the maze
+ * end above the Sponsors section).
  *
  * A black circle grows from where the ball came to rest until it covers the
  * screen; at that point `onCovered` runs, which is where the caller tears
- * down everything above the Intro section; then the circle shrinks away to
- * reveal what is left. The page is held still while it plays — otherwise
- * removing that much of the document would yank the viewport — and released
- * as soon as the circle is gone.
+ * down everything above the section being revealed; then the circle shrinks
+ * away to reveal what is left. The page is held still while it plays —
+ * otherwise removing that much of the document would yank the viewport — and
+ * released as soon as the circle is gone.
  *
  * The circle is a fixed-size div scaled with `transform`, rather than an
  * animated `clip-path` or a custom property: transforms are interpolable
  * everywhere and composited on the GPU, where a bare `--radius` transition
  * needs @property registration and silently snaps without it.
  */
-const GROW_MS = 700;
-const HOLD_MS = 180;
-const SHRINK_MS = 700;
-const EASE = "cubic-bezier(.65,0,.35,1)";
+// Timings and colour live in src/config/ballAnimation.js, under `blackout`.
+const {
+  growMs: GROW_MS,
+  holdMs: HOLD_MS,
+  shrinkMs: SHRINK_MS,
+  easing: EASE,
+  color: COLOR,
+} = config.blackout;
 
 /* The circle's own diameter before scaling. Scaling from a fixed base keeps
    the maths simple; it is sized up to cover the viewport's diagonal. */
@@ -29,31 +36,46 @@ const BASE = 100;
 
 /* Locks scrolling without the page jumping: `position: fixed` alone would
    send the document to the top, so the offset is pinned first and restored
-   afterwards. Returns the undo, which takes where to land. */
+   afterwards. Returns the undo, which takes where to land. Shared by every
+   blackout and counted, so two that overlap (both balls landing within a
+   moment of each other) cannot restore each other's lock and leave the page
+   pinned for good. */
+let locks = 0;
+let restoreScroll = null;
+
 function lockScroll() {
-  const { scrollY } = window;
-  const { body } = document;
-  const previous = {
-    position: body.style.position,
-    top: body.style.top,
-    left: body.style.left,
-    right: body.style.right,
-    overflowY: body.style.overflowY,
-  };
+  if (locks++ === 0) {
+    const { scrollY } = window;
+    const { body } = document;
+    const previous = {
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      overflowY: body.style.overflowY,
+    };
 
-  body.style.position = "fixed";
-  body.style.top = `-${scrollY}px`;
-  body.style.left = "0";
-  body.style.right = "0";
-  body.style.overflowY = "scroll"; // hold the scrollbar's width, no reflow
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.overflowY = "scroll"; // hold the scrollbar's width, no reflow
 
-  return (landAt = scrollY) => {
-    Object.assign(body.style, previous);
-    window.scrollTo(0, landAt);
+    restoreScroll = (landAt = scrollY) => {
+      Object.assign(body.style, previous);
+      window.scrollTo(0, landAt);
+    };
+  }
+
+  let released = false;
+  return (landAt) => {
+    if (released) return;
+    released = true;
+    if (--locks === 0) restoreScroll(landAt);
   };
 }
 
-export default function CircleWipe({ originRef, onCovered }) {
+export default function CircleWipe({ trigger, originRef, onCovered }) {
   // `grown` is separate from the phase so the circle can mount at scale 0
   // and be scaled up on a later frame. Setting the final transform on the
   // very first render gives the browser no value to animate from, and the
@@ -69,15 +91,19 @@ export default function CircleWipe({ originRef, onCovered }) {
     []
   );
 
-  const play = useCallback(() => {
+  const play = useCallback((at) => {
     if (played.current) return; // once per page load
     played.current = true;
 
-    // Grow from wherever the ball finished, falling back to the middle.
+    // Grow out of the ball itself, which reports where it is on screen as it
+    // lands; failing that, from `originRef` (the About Us image, for the
+    // hero), and failing that, from the middle of the screen.
     const box = originRef?.current?.getBoundingClientRect();
-    const point = box
-      ? { x: box.left + box.width / 2, y: box.top + box.height / 2 }
-      : { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    const point = at
+      ? { x: at.x, y: at.y }
+      : box
+        ? { x: box.left + box.width / 2, y: box.top + box.height / 2 }
+        : { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 
     // Far enough to cover the most distant corner from that point.
     const reach = Math.hypot(
@@ -87,7 +113,7 @@ export default function CircleWipe({ originRef, onCovered }) {
     setOrigin({ ...point, scale: (reach * 2.1) / BASE });
 
     // A forced full-screen blackout is the kind of motion this setting
-    // exists to avoid, so switch straight to the Intro with no animation.
+    // exists to avoid, so switch straight to the next section, unanimated.
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       onCovered?.();
       window.scrollTo(0, 0);
@@ -104,9 +130,9 @@ export default function CircleWipe({ originRef, onCovered }) {
     timers.current.push(
       setTimeout(() => {
         // Fully covered: let the caller tear down what came before. That
-        // removes everything above the Intro section, which then becomes
-        // the top of the document — so the page lands at 0, not at the old
-        // section's offset, which no longer exists.
+        // removes everything above the section being revealed, which then
+        // becomes the top of the document — so the page lands at 0, not at
+        // the old section's offset, which no longer exists.
         // Committed synchronously: React would otherwise batch the removal
         // until after unlock(), so the body would un-fix while the old
         // content was still in the document and the viewport would jump as
@@ -120,13 +146,15 @@ export default function CircleWipe({ originRef, onCovered }) {
     );
   }, [originRef, onCovered]);
 
-  // The ball's arrival is announced on the window, so MazeBall does not need
-  // to know this component exists.
+  // The balls' arrivals are announced on the window, so BallFall does not
+  // need to know this component exists; each blackout plays for its own.
   useEffect(() => {
-    const onArrive = () => play();
+    const onArrive = (event) => {
+      if (event.detail?.variant === trigger) play(event.detail);
+    };
     window.addEventListener("mazeball:arrived", onArrive);
     return () => window.removeEventListener("mazeball:arrived", onArrive);
-  }, [play]);
+  }, [trigger, play]);
 
   if (!origin || phase === "idle" || phase === "done") return null;
 
@@ -134,8 +162,9 @@ export default function CircleWipe({ originRef, onCovered }) {
     <div className="pointer-events-none fixed inset-0 z-[60] overflow-hidden">
       <div
         aria-hidden="true"
-        className="absolute rounded-full bg-black will-change-transform"
+        className="absolute rounded-full will-change-transform"
         style={{
+          background: COLOR,
           width: BASE,
           height: BASE,
           left: origin.x - BASE / 2,
