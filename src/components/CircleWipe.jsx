@@ -76,7 +76,7 @@ function lockScroll() {
   };
 }
 
-export default function CircleWipe({ originRef, onCovered, onDone }) {
+export default function CircleWipe({ trigger = "hero", originRef, onCovered, onDone }) {
   // `grown` is separate from the phase so the circle can mount at scale 0
   // and be scaled up on a later frame. Setting the final transform on the
   // very first render gives the browser no value to animate from, and the

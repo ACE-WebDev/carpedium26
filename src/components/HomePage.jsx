@@ -664,8 +664,13 @@ export default function HomePage() {
   const spaceRef = useRef(null);
   const ballTargetRef = useRef(null);
   const dropRef = useRef(null);
+  const [startAt, setStartAt] = useState("hero");
   const [introOnly, setIntroOnly] = useState(false);
-  const enterIntro = useCallback(() => setIntroOnly(true), []);
+  const enterIntro = useCallback(() => {
+    setIntroOnly(true);
+    setStartAt((current) => (current === "hero" ? "intro" : current));
+  }, []);
+  const enterSponsors = useCallback(() => setStartAt("sponsors"), []);
   const [wipeDone, setWipeDone] = useState(false);
   const finishWipe = useCallback(() => setWipeDone(true), []);
 
