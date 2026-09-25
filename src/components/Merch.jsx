@@ -1,5 +1,5 @@
 "use client";
-import Navbar from "./navbar";
+import { useState, useEffect } from "react";
 const assetPathPrefix = '/merch';
 
 const imgBackside1 = `${assetPathPrefix}/ae0a9.png`;
@@ -18,190 +18,59 @@ const imgLine13 = `${assetPathPrefix}/b9c88.svg`;
 
 const W = 1455;
 const H = 1950;
-const NAVBAR_HEIGHT = 94;
-
-const navLinksLeft = ['Home', 'About', 'Events'];
-const navLinksRight = ['Sponsors', 'Merch', 'Contact'];
 
 export default function Merch() {
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const updateScale = () => {
+      const screenWidth = window.innerWidth;
+      if (screenWidth < W) {
+        setScale(screenWidth / W);
+      } else {
+        setScale(1);
+      }
+    };
+    updateScale();
+    window.addEventListener("resize", updateScale);
+    return () => window.removeEventListener("resize", updateScale);
+  }, []);
+
   return (
-    <>
-      <Navbar />
+    <div
+      style={{
+        background: '#efd4a3',
+        minHeight: '100vh',
+        width: '100%',
+        overflowX: 'hidden',
+        paddingTop: 'clamp(64px, 9vh, 85px)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+      }}
+    >
+      {/* ── Responsive Scaled Canvas Container ── */}
       <div
         style={{
-          background: '#efd4a3',
-          minHeight: '100vh',
           width: '100%',
-          overflowX: 'hidden',
-          overflowY: 'auto',
+          display: 'flex',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          height: Math.round(H * scale),
+          position: 'relative',
         }}
       >
-        <style>{`
-          html,
-          body {
-            margin: 0;
-            padding: 0;
-            min-height: 100%;
-            overflow-y: auto !important;
-          }
-
-          body {
-            overflow-x: hidden;
-          }
-
-          .nav-link {
-            font-family: "Lexend Deca", sans-serif;
-            font-weight: 500;
-            font-size: 18px;
-            color: #fff1d8;
-            text-decoration: none;
-            white-space: nowrap;
-            padding: 8px 4px;
-            position: relative;
-            transition: opacity 0.2s ease;
-            letter-spacing: 0.01em;
-          }
-
-          .nav-link::after {
-            content: '';
-            position: absolute;
-            left: 0;
-            right: 0;
-            bottom: 2px;
-            height: 2px;
-            background: #fff1d8;
-            transform: scaleX(0);
-            transform-origin: center;
-            transition: transform 0.25s ease;
-          }
-
-          .nav-link:hover {
-            opacity: 0.85;
-          }
-
-          .nav-link:hover::after {
-            transform: scaleX(1);
-          }
-        `}</style>
-
-        {/* ── Full-width fixed navbar ── */}
-        <nav
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            width: '100%',
-            height: NAVBAR_HEIGHT,
-            background: '#c28b5b',
-            zIndex: 50,
-            display: 'grid',
-            gridTemplateColumns: '1fr auto 1fr',
-            alignItems: 'center',
-            padding: '0 clamp(24px, 5vw, 80px)',
-            boxSizing: 'border-box',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              gap: 40,
-              justifySelf: 'start',
-            }}
-          >
-            {navLinksLeft.map((label) => (
-              <a
-                key={label}
-                href="#"
-                className="nav-link"
-              >
-                {label}
-              </a>
-            ))}
-          </div>
-
-          <div
-            style={{
-              position: 'relative',
-              width: 220,
-              height: 86,
-              justifySelf: 'center',
-            }}
-          >
-            <img
-              src={imgHeaderCircle}
-              alt="Carpe Diem"
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-              }}
-            />
-
-            <div
-              style={{
-                position: 'absolute',
-                background: '#fff1d8',
-                height: '68px',
-                width: '128px',
-                left: '50%',
-                top: '50%',
-                transform: 'translate(-50%, -50%)',
-                maskImage: `url("${imgRectangle94}")`,
-                maskSize: '120px 57px',
-                maskPosition: 'center',
-                maskRepeat: 'no-repeat',
-                WebkitMaskImage: `url("${imgRectangle94}")`,
-                WebkitMaskSize: '120px 57px',
-                WebkitMaskPosition: 'center',
-                WebkitMaskRepeat: 'no-repeat',
-                pointerEvents: 'none',
-              }}
-            />
-          </div>
-
-          <div
-            style={{
-              display: 'flex',
-              gap: 40,
-              justifySelf: 'end',
-            }}
-          >
-            {navLinksRight.map((label) => (
-              <a
-                key={label}
-                href="#"
-                className="nav-link"
-              >
-                {label}
-              </a>
-            ))}
-          </div>
-        </nav>
-
-        {/* ─────────────────────────────────────────────
-            MAIN PAGE CONTENT
-
-            IMPORTANT:
-            No overflowX/overflowY here.
-            The browser itself handles vertical scrolling.
-            ───────────────────────────────────────────── */}
         <div
           style={{
-            width: '100%',
-            paddingTop: NAVBAR_HEIGHT,
+            position: 'relative',
+            width: W,
+            height: H,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top center',
+            background: '#efd4a3',
+            flexShrink: 0,
           }}
         >
-          <div
-            style={{
-              position: 'relative',
-              width: W,
-              height: H,
-              margin: '0 auto',
-              background: '#efd4a3',
-            }}
-          >
             {/* ── Gradient band ── */}
             <div
               style={{
@@ -834,6 +703,5 @@ export default function Merch() {
           </div>
         </div>
       </div>
-    </>
   );
 }
