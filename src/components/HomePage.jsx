@@ -5,8 +5,50 @@ import Image from "next/image";
 import Navbar from "./navbar";
 import MazeBall from "./MazeBall";
 import BallFall from "./BallFall";
+import BallPin, { navbarBottom, pageTop, pinOf, setPin } from "./BallPin";
 import SlopeBall from "./SlopeBall";
 import CircleWipe from "./CircleWipe";
+import { createGlide } from "./scrollGlide";
+import config from "@/config/ballAnimation";
+import { onJump, peekPendingJump, takePendingJump } from "@/lib/homeJump";
+
+/* Where each navbar jump starts the page: its section as it is once the
+   animations before it have played. */
+const JUMP_START = {
+  home: "hero",
+  about: "intro",
+  sponsors: "sponsors",
+  contact: "sponsors",
+};
+
+/* Puts the page at a navbar jump's target — the top of what is left of it,
+   or the footer — and keeps it there for a moment while the page settles
+   around it (images loading, the balls pacing themselves), unless the
+   visitor scrolls first. Returns the cleanup. */
+function landOn(target) {
+  const place = () => {
+    const footer = target === "contact" && document.getElementById("contact");
+    if (footer) footer.scrollIntoView({ block: "start" });
+    else window.scrollTo(0, 0);
+  };
+  const observer = new ResizeObserver(place);
+  const release = () => {
+    observer.disconnect();
+    window.removeEventListener("wheel", release);
+    window.removeEventListener("touchstart", release);
+    window.removeEventListener("keydown", release);
+  };
+  place();
+  observer.observe(document.body);
+  window.addEventListener("wheel", release, { passive: true });
+  window.addEventListener("touchstart", release, { passive: true });
+  window.addEventListener("keydown", release);
+  const timer = setTimeout(release, 2500);
+  return () => {
+    clearTimeout(timer);
+    release();
+  };
+}
 
 
 /* ================= DIGIT REEL (single spinning character) ================= */
@@ -184,7 +226,9 @@ function PerformerFan({ images = FAN_IMAGES }) {
     };
   }, [isTouch]);
 
-  const spread = isTouch ? 30 : 55;
+  // Phones: fanned out at full size, spread so the side cards stay on
+  // screen (a 64vw card spread 26% each way spans just under 100vw).
+  const spread = isTouch ? 26 : 55;
   const rot = isTouch ? 10 : 20;
   const ease = "transform 500ms cubic-bezier(0.22, 1, 0.36, 1)";
   const cardClass =
@@ -195,10 +239,8 @@ function PerformerFan({ images = FAN_IMAGES }) {
         ref={ref}
         className="relative z-10 cursor-pointer"
         style={{
-          width: isTouch ? "min(90vw, 380px)" : "min(40vw, 640px)",
+          width: isTouch ? "min(64vw, 300px)" : "min(40vw, 640px)",
           aspectRatio: "512 / 718",
-          transform: isTouch && open ? "scale(0.65)" : "none",
-          transition: "transform 500ms cubic-bezier(0.22, 1, 0.36, 1)",
         }}
         onMouseEnter={() => !isTouch && setOpen(true)}
         onMouseLeave={() => !isTouch && setOpen(false)}
@@ -245,10 +287,20 @@ function PerformerFan({ images = FAN_IMAGES }) {
   );
 }
 
-function BallTrack({ className = "", trailColor = "#C28B5B" }) {
+/* `enabled`: held at the start until then (the Intro is only the top of the
+   page once the first blackout has finished), then rolls to where the
+   scroll has got to. */
+function BallTrack({ className = "", trailColor = "#C28B5B", enabled = true }) {
   const trackRef = useRef(null);
   const ballRef = useRef(null);
   const trailRef = useRef(null);
+  const enabledRef = useRef(enabled);
+  const glideRef = useRef(null);
+
+  useEffect(() => {
+    enabledRef.current = enabled;
+    glideRef.current?.update();
+  }, [enabled]);
 
   useEffect(() => {
     const track = trackRef.current;
@@ -256,18 +308,21 @@ function BallTrack({ className = "", trailColor = "#C28B5B" }) {
     const trail = trailRef.current;
     if (!track || !ball || !trail) return;
 
-    let raf = 0;
-
-    const update = () => {
-      raf = 0;
+    // 0 when the track enters at the bottom of the screen — or where it is
+    // with the page at its top, if that is higher (after the first blackout
+    // it starts on screen), so the ball always sets off from the start —
+    // and 1 when it has climbed to a quarter of the way down.
+    const progress = () => {
+      if (!enabledRef.current) return 0;
       const vh = window.innerHeight;
       const rect = track.getBoundingClientRect();
       const centerY = rect.top + rect.height / 2;
+      const from = Math.min(vh, pageTop(track) + rect.height / 2);
+      const to = vh * 0.25;
+      return Math.min(1, Math.max(0, (from - centerY) / Math.max(1, from - to)));
+    };
 
-      // 0 when the track enters at the bottom of the screen,
-      // 1 when it has climbed to 30% from the top
-      const p = Math.min(1, Math.max(0, (vh - centerY) / (vh * 0.7)));
-
+    const draw = (p) => {
       const size = ball.offsetWidth;
       const x = p * (track.clientWidth - size);
       const rollDeg = (x / (size / 2)) * (180 / Math.PI); // rolls without slipping
@@ -276,17 +331,18 @@ function BallTrack({ className = "", trailColor = "#C28B5B" }) {
       trail.style.width = `${x + size / 2}px`;
     };
 
-    const onScroll = () => {
-      if (!raf) raf = requestAnimationFrame(update);
-    };
+    const glide = createGlide(progress, draw);
+    glideRef.current = glide;
+    const onResize = () => glide.jump();
 
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
+    glide.jump();
+    window.addEventListener("scroll", glide.update, { passive: true });
+    window.addEventListener("resize", onResize);
     return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-      if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", glide.update);
+      window.removeEventListener("resize", onResize);
+      glide.stop();
+      glideRef.current = null;
     };
   }, []);
 
@@ -318,11 +374,23 @@ function BallTrack({ className = "", trailColor = "#C28B5B" }) {
 }
 
 /* ================= BALL RUN over a single maze image (serpentine lanes) ================= */
+/* The least scrolling the whole run takes, in screen heights. */
+const RUN_SCREENS = 1.2;
+/* The run starts once the first lane has been scrolled up to RUN_FROM of the
+   way down the screen, and is over — the ball gone off the left edge — by
+   the time the second lane is up at RUN_TO, still well in view. */
+const RUN_FROM = 0.75;
+const RUN_TO = 0.3;
+
+/* `enabled`: held at the start, out of sight, until then — so it cannot run
+   while the Sponsors maze ball is still falling above it. Once over, it
+   marks its box with `data-run-end`, the scroll position by which its ball
+   has gone, for the fall after it to wait for (BallFall's `after`). */
 function MazeRun({
-  boxRef,          
-  srcWidth,
-  lanes,
-  corridor,
+  boxRef,
+  lanes, // the lanes' middles, in the image's own px down it
+  corridor, // and how wide each is
+  enabled = true,
   trailColor = "#C28B5B",
   debug = false,   // draws red bands where the code thinks the corridors are
 }) {
@@ -330,6 +398,13 @@ function MazeRun({
   const pathRef = useRef(null);
   const trailRef = useRef(null);
   const ballRef = useRef(null);
+  const enabledRef = useRef(enabled);
+  const repaceRef = useRef(null);
+
+  useEffect(() => {
+    enabledRef.current = enabled;
+    repaceRef.current?.();
+  }, [enabled]);
 
   useEffect(() => {
     const box = boxRef.current;
@@ -337,16 +412,20 @@ function MazeRun({
 
     const measure = () => {
       const img = box.querySelector("img[data-run]");
-      if (!img) return;
+      if (!img?.naturalHeight) return;
       const b = box.getBoundingClientRect();
       const i = img.getBoundingClientRect();
-      const s = i.width / srcWidth; // PNG pixels -> screen pixels
+      // Image px -> screen px, down the image: it is stretched sideways
+      // further than it is drawn tall.
+      const s = i.height / img.naturalHeight;
 
       const ys = lanes.map((y) => i.top - b.top + y * s);
       const thick = corridor * s;
       const r = (thick * 0.7) / 2; // ball fills 80% of the corridor
-      const xL = i.left - b.left - r * 2;
-      const xR = i.left - b.left + i.width + r * 2;
+      // From just off one side of the screen to just off the other, where
+      // the image runs on past them (it is drawn wider than the screen).
+      const xL = Math.max(i.left - b.left, 0) - r * 2;
+      const xR = Math.min(i.left - b.left + i.width, b.width) + r * 2;
 
       let d = `M ${xL} ${ys[0]}`;
       ys.forEach((y, n) => {
@@ -365,8 +444,15 @@ function MazeRun({
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(box);
-    return () => ro.disconnect();
-  }, [boxRef, srcWidth, lanes, corridor]);
+    // It is only measurable once the image has loaded, which need not
+    // resize the box (its size is known beforehand).
+    const img = box.querySelector("img[data-run]");
+    img?.addEventListener("load", measure);
+    return () => {
+      ro.disconnect();
+      img?.removeEventListener("load", measure);
+    };
+  }, [boxRef, lanes, corridor]);
 
   // 2) Move ball + trail along the path with scroll
   useEffect(() => {
@@ -380,31 +466,98 @@ function MazeRun({
     const total = path.getTotalLength();
     trail.style.strokeDasharray = `${total} ${total}`;
 
-    let raf = 0;
-    const update = () => {
-      raf = 0;
+    // Where the box's top is on screen when the run starts (`top0`), and how
+    // much scrolling it takes: `hold` px with the scene it is in (the
+    // heading and the lanes) held there, where the page alone gives it less
+    // than RUN_SCREENS, then `moving` px more as the page carries the lanes
+    // up to RUN_TO. After the second blackout the lanes are already high on
+    // the screen, so it starts right there, with the page at its top, from
+    // the very beginning. Where the scene fits on screen (a phone) it is
+    // held still for the whole run instead: centred under the navbar, or
+    // where it already is with the page at its top, if that is higher.
+    const pin = pinOf(box);
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const on = () => enabledRef.current || reduced;
+    let offset = 0; // the box's top below the scene's
+    let top0 = 0;
+    let hold = 0;
+    let moving = 0;
+    let runEnd = null;
+    const pace = () => {
       const vh = window.innerHeight;
-      const rect = box.getBoundingClientRect();
-      const p = Math.min(1, Math.max(0, (vh * 0.7 - rect.top) / (vh * 0.3 + rect.height)));
+      const navBottom = navbarBottom();
+      const boxTop = box.getBoundingClientRect().top;
+      const scene = pin ? pin.sticky.getBoundingClientRect() : { top: boxTop, height: 0 };
+      offset = boxTop - scene.top;
+      // The scene's top with the page scrolled right to the top (the track
+      // it is pinned in never sticks, so it gives that even mid-hold).
+      const sceneTop = pageTop(pin ? pin.track : box);
+      const topAtStart = sceneTop + offset;
+      const holds = on() && !reduced && config.scroll.screensPerSecond > 0 && !!pin;
+      const room = vh - navBottom;
+      if (holds && scene.height <= room) {
+        const heldTop = Math.min(navBottom + (room - scene.height) / 2, sceneTop);
+        top0 = heldTop + offset;
+        moving = 0;
+        hold = RUN_SCREENS * vh;
+      } else {
+        top0 = Math.min(vh * RUN_FROM - geo.ys[0], topAtStart);
+        const top1 = Math.max(vh * RUN_TO, navBottom + geo.r * 2) - geo.ys[1];
+        moving = Math.max(0, top0 - top1);
+        hold = holds ? Math.max(0, RUN_SCREENS * vh - moving) : 0;
+      }
+      if (pin) setPin(pin, top0 - offset, hold);
+
+      // Where the page is scrolled to by the time the ball has gone: the
+      // fall after it waits for that.
+      const end = on() ? Math.round(topAtStart - top0 + hold + moving) : null;
+      if (end !== runEnd) {
+        runEnd = end;
+        if (end === null) delete box.dataset.runEnd;
+        else box.dataset.runEnd = String(end);
+        window.dispatchEvent(new Event("ballrun:paced"));
+      }
+    };
+
+    const progress = () => {
+      if (!on()) return 0;
+      // Where the box would be if the scene were never held.
+      const top = pin
+        ? pin.track.getBoundingClientRect().top + offset
+        : box.getBoundingClientRect().top;
+      return Math.min(1, Math.max(0, (top0 - top) / Math.max(1, hold + moving)));
+    };
+
+    const draw = (p) => {
       const len = p * total;
       const pt = path.getPointAtLength(len);
       const roll = (pt.x / geo.r) * (180 / Math.PI);
 
-     ball.setAttribute("transform", `translate(${pt.x} ${pt.y}) rotate(${roll})`);
-     const trailLen = Math.max(0, len - geo.r * 1.2);
-     trail.style.strokeDashoffset = String(total - trailLen);
-    };
-    const onScroll = () => {
-      if (!raf) raf = requestAnimationFrame(update);
+      ball.setAttribute("transform", `translate(${pt.x} ${pt.y}) rotate(${roll})`);
+      const trailLen = Math.max(0, len - geo.r * 1.2);
+      trail.style.strokeDashoffset = String(total - trailLen);
     };
 
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
+    // Re-created whenever the layout is re-measured, so it starts from
+    // where the ball belongs. Re-paced whenever the page around it changes
+    // too: a blackout removing everything above it, or a resize.
+    const glide = createGlide(progress, draw);
+    const repace = () => {
+      pace();
+      glide.jump();
+    };
+    repaceRef.current = repace;
+    repace();
+    const pageObserver = new ResizeObserver(repace);
+    pageObserver.observe(document.body);
+    window.addEventListener("scroll", glide.update, { passive: true });
+    window.addEventListener("resize", repace);
     return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-      if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", glide.update);
+      window.removeEventListener("resize", repace);
+      pageObserver.disconnect();
+      glide.stop();
+      repaceRef.current = null;
     };
   }, [geo, boxRef]);
 
@@ -475,14 +628,17 @@ function ScrollHint() {
     };
   }, []);
 
+  // Kept at the bottom of the screen, not of the hero: on a phone the hero
+  // is only as tall as the maze, and in scroll mode it holds still while the
+  // ball falls, so there is nothing to scroll "to" — it scrolls a screen on.
   return (
     <button
       onClick={() =>
-        document.getElementById("about-us")?.scrollIntoView({ behavior: "smooth" })
+        window.scrollBy({ top: window.innerHeight * 0.8, behavior: "smooth" })
       }
       aria-hidden={!visible}
       tabIndex={visible ? 0 : -1}
-      className={`absolute bottom-16 flex cursor-pointer flex-col items-center gap-3 transition-opacity duration-500 ${
+      className={`fixed bottom-[max(2.5rem,env(safe-area-inset-bottom))] left-1/2 z-40 flex -translate-x-1/2 cursor-pointer flex-col items-center gap-3 transition-opacity duration-500 ${
         visible ? "opacity-100" : "opacity-0 pointer-events-none"
       }`}
     >
@@ -660,22 +816,51 @@ function BarDrop({
 }
 
 export default function HomePage() {
-  const SPACE_LANES = [240, 525];
+  // The middles of the two gaps between the bars in sponsorsection.png the
+  // ball runs along (rows 301–416 and 730–835), in its own px.
+  const SPACE_LANES = [358, 782];
   const spaceRef = useRef(null);
   const ballTargetRef = useRef(null);
   const dropRef = useRef(null);
-  const [startAt, setStartAt] = useState("hero");
-  const [introOnly, setIntroOnly] = useState(false);
-  const enterIntro = useCallback(() => {
-    setIntroOnly(true);
-    setStartAt((current) => (current === "hero" ? "intro" : current));
-  }, []);
+  // A navbar link that brought us here, if one did (src/lib/homeJump.js).
+  const [initialJump] = useState(peekPendingJump);
+  // Where the page begins. Each blackout drops everything above the section
+  // it reveals: "hero" is everything, then "intro" once the first ball has
+  // landed in About Us, then "sponsors" once the second has landed on the
+  // maze end above the Sponsors section. A navbar link can start it at any
+  // of them.
+  const [startAt, setStartAt] = useState(() => JUMP_START[initialJump] ?? "hero");
+  const enterIntro = useCallback(
+    () => setStartAt((current) => (current === "hero" ? "intro" : current)),
+    []
+  );
   const enterSponsors = useCallback(() => setStartAt("sponsors"), []);
-  const [wipeDone, setWipeDone] = useState(false);
+  const [wipeDone, setWipeDone] = useState(startAt !== "hero");
   const finishWipe = useCallback(() => setWipeDone(true), []);
 
+  // A navbar link followed while already here starts the page afresh where
+  // it asks (`round` remounts everything, so its blackouts can play again),
+  // and `jump` then lands on it once that has rendered.
+  const [round, setRound] = useState(0);
+  const [jump, setJump] = useState(() => initialJump && { target: initialJump });
+  useEffect(
+    () =>
+      onJump((target) => {
+        setStartAt(JUMP_START[target]);
+        setWipeDone(target !== "home");
+        setRound((current) => current + 1);
+        setJump({ target });
+      }),
+    []
+  );
+  useEffect(() => {
+    if (!jump) return;
+    takePendingJump();
+    return landOn(jump.target);
+  }, [jump]);
+
   return (
-    <div className="relative w-full bg-[#EDD4A3] flex flex-col overflow-x-clip">
+    <div key={round} className="relative w-full bg-[#EDD4A3] flex flex-col overflow-x-clip">
       <Navbar />
 
       {startAt === "hero" && (
@@ -683,30 +868,32 @@ export default function HomePage() {
       {/* Hero Section */}
       <MazeBall
         hero={
-        <section className="relative h-screen w-full flex flex-col items-center justify-start pt-32">
+        <section className="relative h-full w-full">
           <ScrollHint />
         </section>
         }
       >
         {/* About Us Section — inside MazeBall so the ball can roll from the
             hero down into it; `data-ball-target` marks where it comes to rest. */}
-        <section id="about-us" className="relative w-full flex items-center justify-center pt-24 pb-8 md:py-24">
-          <div className="relative md:contents">
+        <section id="about-us" className="relative w-full flex items-center justify-center pt-10 pb-8 md:py-24">
+          {/* The words turn about (50.15%, 71.28%) of aboutustxt.png
+              (336 x 207), which these put on the ring's centre. */}
+          <div className="relative">
             <Image
               src="/mazeend.png"
               alt="About Us"
-              width={400}
-              height={400}
+              width={480}
+              height={480}
               data-ball-target=""
               ref={ballTargetRef}
-              className="w-[min(51vw,25rem)] h-[min(51vw,25rem)] object-contain"
+              className="w-[min(64vw,30rem)] h-[min(64vw,30rem)] object-contain"
             />
             <Image
               src="/aboutustxt.png"
               alt="Sponsors Text"
               width={300}
               height={300}
-              className="absolute w-[62.5%] left-[20.5%] top-[20%] md:w-[16.5%] md:left-[42%] md:top-[30%] h-auto max-w-none animate-spin motion-reduce:animate-none"
+              className="absolute w-[61%] left-[19.4%] top-[23.2%] h-auto max-w-none animate-spin motion-reduce:animate-none"
               style={{
                 transformOrigin: "50.15% 71.28%",
                 animationDuration: "10s",
@@ -718,17 +905,23 @@ export default function HomePage() {
         </>
       )}
 
-      {/* Outside the block above on purpose: it unmounts that content
-          mid-transition, so it must not be a child of it or it would tear
-          itself down before the circle could shrink back. */}
-      <CircleWipe originRef={ballTargetRef} onCovered={enterIntro} onDone={finishWipe} />
+      {/* Outside the blocks they remove on purpose: each unmounts that
+          content mid-transition, so it must not be a child of it or it would
+          tear itself down before the circle could shrink back. */}
+      <CircleWipe
+        trigger="hero"
+        originRef={ballTargetRef}
+        onCovered={enterIntro}
+        onDone={finishWipe}
+      />
+      <CircleWipe trigger="sponsors" onCovered={enterSponsors} />
 
       {startAt !== "sponsors" && (
         <>
       {/* Intro Section */}
       <section
         id="carpediem-intro"
-        className="relative w-full min-h-0 md:min-h-[150vh] bg-[#EDD4A3] flex flex-col items-center justify-center px-6 pt-11 pb-0 md:py-24 text-center overflow-hidden"
+        className="relative w-full min-h-0 md:min-h-[150vh] bg-[#EDD4A3] flex flex-col items-center justify-center px-6 pt-24 pb-0 md:py-24 text-center overflow-hidden"
       >
         <Image
           src="/carpediem-grass.png"
@@ -740,7 +933,7 @@ export default function HomePage() {
         />
 
         <p
-          className="relative z-10 mb-4 text-[12.5px] md:text-[clamp(1.1rem,2.5vw,37px)]"
+          className="relative z-10 mb-2 md:mb-4 text-[15px] md:text-[clamp(1.1rem,2.5vw,37px)]"
           style={{
             fontFamily: "'BBH Hegarty', sans-serif",
             fontWeight: 400,
@@ -751,7 +944,7 @@ export default function HomePage() {
         </p>
 
         <h2
-          className="relative z-10 uppercase text-[10vw] leading-[1.02] md:text-[clamp(2.75rem,10vw,150px)] md:leading-[1.0667]"
+          className="relative z-10 uppercase text-[11.5vw] leading-[1.02] md:text-[clamp(2.75rem,10vw,150px)] md:leading-[1.0667]"
           style={{
             fontFamily: "'BBH Hegarty', sans-serif",
             fontWeight: 400,
@@ -762,7 +955,7 @@ export default function HomePage() {
         </h2>
 
         <h2
-          className="relative z-10 normal-case md:uppercase text-[10vw] leading-[1.02] md:text-[clamp(2.75rem,10vw,150px)] md:leading-[1.0667]"
+          className="relative z-10 normal-case md:uppercase text-[11.5vw] leading-[1.02] md:text-[clamp(2.75rem,10vw,150px)] md:leading-[1.0667]"
           style={{
             fontFamily: "'BBH Hegarty', sans-serif",
             fontWeight: 400,
@@ -773,7 +966,7 @@ export default function HomePage() {
         </h2>
 
         <h2
-          className="relative z-10 uppercase mb-2 text-[10vw] leading-[1.02] md:text-[clamp(2.75rem,10vw,150px)] md:leading-[1.0667]"
+          className="relative z-10 uppercase mb-2 text-[11.5vw] leading-[1.02] md:text-[clamp(2.75rem,10vw,150px)] md:leading-[1.0667]"
           style={{
             fontFamily: "'BBH Hegarty', sans-serif",
             fontWeight: 400,
@@ -783,7 +976,7 @@ export default function HomePage() {
           EDITION
         </h2>
 
-        <div className="relative z-10 w-full flex items-center justify-center mt-11 md:-mt-16">
+        <div className="relative z-10 w-full flex items-center justify-center mt-5 md:-mt-16">
           <div
             className="absolute left-1/2 -translate-x-1/2 w-screen flex flex-col gap-[7.5vw] md:gap-[clamp(24px,3vw,90px)]"
           >
@@ -809,7 +1002,7 @@ export default function HomePage() {
         </div>
 
         <p
-          className="relative z-10 max-w-[330px] md:max-w-[1000px] mt-10 md:-mt-16 text-[11px] leading-[1.25] md:text-[clamp(1rem,2vw,36px)] md:leading-[1.4]"
+          className="relative z-10 max-w-[360px] md:max-w-[1000px] mt-5 md:-mt-16 text-[15px] leading-[1.4] md:text-[clamp(1rem,2vw,36px)] md:leading-[1.4]"
           style={{
             fontFamily: "'Bricolage Grotesque', sans-serif",
             fontWeight: 400,
@@ -827,6 +1020,12 @@ export default function HomePage() {
         </p>
       </section>
 
+      {/* The Flagship section and the Sponsors maze under its wave are held
+          on screen together while the maze ball falls, so the wave stays
+          over the top of the maze rather than scrolling off and leaving a
+          gap: the slope ball drops behind it, the maze ball comes out from
+          under it. */}
+      <BallPin>
       {/* Flagship Event Section */}
       <section
         id="flagship-event"
@@ -856,20 +1055,20 @@ export default function HomePage() {
           />
         </div>
 
-        <h2 className="relative z-10 mx-auto mt-0 md:mt-8 mb-8 flex flex-col w-full max-w-[1020px] text-center uppercase font-['Unbounded',sans-serif] font-black leading-[1.44] md:leading-[1.3]">
-          <span className="block text-[#1C1E2C] hover:text-[#FACC15] transition-colors duration-200 cursor-default text-[9vw] md:text-[clamp(3rem,8.5vw,115px)]">
+        <h2 className="relative z-10 mx-auto mt-0 md:mt-8 mb-4 md:mb-8 flex flex-col w-full max-w-[1020px] text-center uppercase font-['Unbounded',sans-serif] font-black leading-[1.44] md:leading-[1.3]">
+          <span className="block text-[#1C1E2C] hover:text-[#FACC15] transition-colors duration-200 cursor-default text-[10.5vw] md:text-[clamp(3rem,8.5vw,115px)]">
             OUR
           </span>
-          <span className="block text-[#1C1E2C] hover:text-[#FACC15] transition-colors duration-200 cursor-default text-[9vw] md:text-[clamp(3rem,8.5vw,115px)]">
+          <span className="block text-[#1C1E2C] hover:text-[#FACC15] transition-colors duration-200 cursor-default text-[10.5vw] md:text-[clamp(3rem,8.5vw,115px)]">
             FLAGSHIP
           </span>
-          <span className="block text-[#1C1E2C] hover:text-[#FACC15] transition-colors duration-200 cursor-default text-[9vw] md:text-[clamp(3rem,8.5vw,115px)]">
+          <span className="block text-[#1C1E2C] hover:text-[#FACC15] transition-colors duration-200 cursor-default text-[10.5vw] md:text-[clamp(3rem,8.5vw,115px)]">
             EVENT
           </span>
         </h2>
 
         <p
-          className="relative z-10 mx-auto max-w-[312px] md:max-w-[1150px] mt-7 md:mt-35 px-0 md:px-4 text-[10px] leading-[1.3] md:text-[clamp(1rem,2.5vw,60px)] md:leading-[1.2]"
+          className="relative z-10 mx-auto max-w-[360px] md:max-w-[1150px] mt-3 md:mt-35 px-0 md:px-4 text-[15px] leading-[1.4] md:text-[clamp(1rem,2.5vw,60px)] md:leading-[1.2]"
           style={{
             fontFamily: "'Bricolage Grotesque', sans-serif",
             fontWeight: 400,
@@ -908,19 +1107,14 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-        </>
-      )}
 
-      {/* Sponsors & Maze Section. After the second blackout only the Sponsors
-          part is left: with no maze above it and nothing to overlap, it drops
-          the pull-up and its heading starts clear of the navbar instead. */}
-      <div
-        className={`relative z-10 w-full overflow-hidden ${
-          startAt === "sponsors" ? "" : "-mt-[12.5%]"
-        }`}
-      >
-        {startAt !== "sponsors" && (
-          <>
+      {/* The Sponsors maze, pulled up under the wave. Clipped sideways only
+          (`clip`, not `hidden`), so it can still stick on screen while its
+          ball falls. On a phone it is drawn 1.6x bigger — its middle, where
+          the ball falls, like the hero's — and room is made below for that
+          (0.6 of its 129.4%-of-the-width height). */}
+      <div className="relative z-10 w-full overflow-x-clip -mt-[12.5%] max-sm:pb-[77.6%]">
+        <div className="origin-top max-sm:scale-[1.6]">
             <Image
               src="/sponsormaze1.png"
               alt=""
@@ -931,64 +1125,96 @@ export default function HomePage() {
             />
 
             <div className="relative w-full aspect-[1000/738] overflow-hidden -mt-[22%] -mb-[13%]">
-              <Image
-                src="/mazeend.png"
-                alt=""
-                width={500}
-                height={500}
-                data-ball-target=""
-                className="absolute left-1/2 top-[65%] -translate-x-1/2 -translate-y-1/2 w-[24.9%] h-auto max-w-none pointer-events-none select-none"
-              />
-              <Image
-                src="/sponsortxt.png"
-                alt="Sponsors"
-                width={300}
-                height={300}
-                className="absolute w-[14.5%] h-auto max-w-none animate-spin motion-reduce:animate-none"
-                style={{
-                  left: "43%",
-                  top: "54.5%",
-                  transformOrigin: "50.15% 71.28%",
-                  animationDuration: "10s",
-                }}
-              />
+              {/* The ring and its words, 1.2x the size they were, grown from
+                  the top of the ring — where the ball comes in — so it still
+                  meets the maze's exit. */}
+              <div
+                className="absolute inset-0 scale-[1.2]"
+                style={{ transformOrigin: "50% 48.4%" }}
+              >
+                <Image
+                  src="/mazeend.png"
+                  alt=""
+                  width={500}
+                  height={500}
+                  data-ball-target=""
+                  className="absolute left-1/2 top-[65%] -translate-x-1/2 -translate-y-1/2 w-[24.9%] h-auto max-w-none pointer-events-none select-none"
+                />
+                <Image
+                  src="/sponsortxt.png"
+                  alt="Sponsors"
+                  width={300}
+                  height={300}
+                  className="absolute w-[14.5%] h-auto max-w-none animate-spin motion-reduce:animate-none"
+                  style={{
+                    left: "43%",
+                    top: "54.5%",
+                    transformOrigin: "50.15% 71.28%",
+                    animationDuration: "10s",
+                  }}
+                />
+              </div>
             </div>
+        </div>
 
             {/* The same maze again, with the same ball fall through it onto
                 the maze end above, where the second blackout takes over. */}
             <BallFall variant="sponsors" />
-          </>
-        )}
+      </div>
+      </BallPin>
+        </>
+      )}
 
+      {/* Sponsors Section. After the second blackout it is all that is left
+          above the footer: with nothing above it, its heading starts clear
+          of the navbar. Clipped sideways only, so it can still stick on
+          screen while its balls run. */}
+      <div
+        className={`relative z-10 w-full overflow-x-clip ${
+          startAt === "sponsors" ? "pt-[calc(9vh_+_64px)]" : "pt-[15%]"
+        }`}
+      >
+        {/* The heading and the lanes, held on screen while the lanes' ball
+            runs (MazeRun). On a phone the lanes are drawn bigger. */}
+        <BallPin>
         <h2
-          className={`relative z-20 w-full ${
-            startAt === "sponsors" ? "mt-[calc(9vh_+_64px)]" : "mt-[15%]"
-          } text-center uppercase leading-none font-normal font-['BBH_Hegarty'] text-[#1C1F2A] text-[10vw] md:text-[clamp(6rem,2.9vw,56px)]`}
+          id="sponsors"
+          className="relative z-20 w-full scroll-mt-24 text-center uppercase leading-none font-normal font-['BBH_Hegarty'] text-[#1C1F2A] text-[10vw] md:text-[clamp(6rem,2.9vw,56px)]"
         >
           Sponsors
         </h2>
 
-        <div ref={spaceRef} className="relative z-10 w-full">
+        {/* sponsorsection.png is blank above its first bar, down to 18% of
+            its height: the negative margin tucks most of that under the
+            heading. */}
+        <div ref={spaceRef} className="relative z-10 w-full max-sm:pb-[27.4%]">
           <Image
             data-run=""
             src="/sponsorsection.png"
             alt=""
-            width={1920}  
-            height={1080}
+            width={1712}
+            height={1114}
             unoptimized
-            className="block w-full h-auto scale-x-[1.25] scale-y-[0.75] pointer-events-none select-none"
+            className="block w-full h-auto -mt-[9%] max-sm:-mt-[15%] origin-top scale-x-[1.25] max-sm:scale-x-[1.9] max-sm:scale-y-[1.5] pointer-events-none select-none"
           />
 
+          {/* The second of the three balls here, in turn: it waits for the
+              Sponsors maze ball's blackout, and the fall below waits for it. */}
           <MazeRun
             boxRef={spaceRef}
-            srcWidth={1920}
             lanes={SPACE_LANES}
-            corridor={90}
+            corridor={110}
+            enabled={startAt === "sponsors"}
             debug={false}
           />
         </div>
+        </BallPin>
 
-        <div ref={dropRef} className="relative w-full">
+        {/* The last run, held on screen while its ball falls once the lanes'
+            ball has gone. Above the lanes, which its first bar overlaps. On
+            a phone it is drawn bigger, and room is made below for that. */}
+        <BallPin className="z-10 max-sm:pb-[28%]">
+        <div ref={dropRef} className="relative z-10 w-full origin-top max-sm:scale-[1.3]">
           <Image
             data-bar="a"
             src="/carpediem-maze-bottom.png"
@@ -1038,7 +1264,7 @@ export default function HomePage() {
             data-ball-target=""
             role="img"
             aria-label="Carpe Diem"
-            className="home-logo relative mx-auto w-[42%] aspect-square -mt-[12%] -mb-[8%] pointer-events-none"
+            className="home-logo relative mx-auto w-[54%] aspect-square -mt-[16%] -mb-[12%] pointer-events-none"
           />
 
           <BallFall variant="end" />
@@ -1046,6 +1272,7 @@ export default function HomePage() {
 
         <BarDrop boxRef={dropRef} afterRef={spaceRef} target={{ x: 0.9, y: 0.1 }} />
       </div>
+        </BallPin>
       </div>
     </div>
   );

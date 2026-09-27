@@ -2,8 +2,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { requestJump } from "@/lib/homeJump";
 import "./navbar.css";
+
+/* Links into the home page, and which part of it each lands on. */
+const JUMPS = {
+  "/": "home",
+  "/#about-us": "about",
+  "/#sponsors": "sponsors",
+  "/#contact": "contact",
+};
 
 const NAV_LINKS = [
   { label: "Home", href: "/" },
@@ -17,19 +26,21 @@ const NAV_LINKS = [
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
+  // Links into the home page go straight to their section as it is after
+  // the animations before it — no opening, no ball falls or blackouts on
+  // the way (src/lib/homeJump.js). Clicks meant for a new tab or window are
+  // left to the browser.
   const handleLinkClick = (e, href) => {
     setMenuOpen(false);
-
-    // Smooth-scroll to hash section if already on home page
-    if (href.startsWith("/#") && pathname === "/") {
-      const targetId = href.replace("/#", "");
-      const el = document.getElementById(targetId);
-      if (el) {
-        e.preventDefault();
-        el.scrollIntoView({ behavior: "smooth" });
-      }
+    const jump = JUMPS[href];
+    if (!jump || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+      return;
     }
+    e.preventDefault();
+    requestJump(jump);
+    if (pathname !== "/") router.push("/");
   };
 
   return (
@@ -73,7 +84,13 @@ export default function Navbar() {
 
           {/* Center Logo with Oval Background Dip */}
           <div className="oval-nav">
-            <Link href="/" className="navbar-logo" role="img" aria-label="Carpe Diem" />
+            <Link
+              href="/"
+              className="navbar-logo"
+              role="img"
+              aria-label="Carpe Diem"
+              onClick={(e) => handleLinkClick(e, "/")}
+            />
           </div>
 
           {/* Desktop Right Nav Links */}

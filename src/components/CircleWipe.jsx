@@ -86,6 +86,9 @@ export default function CircleWipe({ trigger = "hero", originRef, onCovered, onD
   const [origin, setOrigin] = useState(null);
   const timers = useRef([]);
   const played = useRef(false);
+  // Releases the page if it is still held when this goes away mid-play (a
+  // navbar link restarting the page).
+  const unlockRef = useRef(null);
 
   // Always call the latest onDone without making `play` depend on it.
   const onDoneRef = useRef(onDone);
@@ -94,7 +97,10 @@ export default function CircleWipe({ trigger = "hero", originRef, onCovered, onD
   }, [onDone]);
 
   useEffect(
-    () => () => timers.current.forEach(clearTimeout),
+    () => () => {
+      timers.current.forEach(clearTimeout);
+      unlockRef.current?.(0);
+    },
     []
   );
 
@@ -130,6 +136,7 @@ export default function CircleWipe({ trigger = "hero", originRef, onCovered, onD
     }
 
     const unlock = lockScroll();
+    unlockRef.current = unlock;
     setPhase("grow");
     requestAnimationFrame(() =>
       requestAnimationFrame(() => setGrown(true))

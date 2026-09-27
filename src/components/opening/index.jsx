@@ -25,10 +25,11 @@ export default async function Opening({ children }) {
       logoPath={logoPath}
       text={
         <>
-          <div className="font-['BBH_Hegarty'] text-[clamp(48px,18vw,136.35px)] leading-none font-normal text-[#283618]">
+          {/* Sized from the wordmark above it (opening.css). */}
+          <div className="opening-title font-['BBH_Hegarty'] font-normal text-[#283618]">
             Aranya
           </div>
-          <div className="text-center font-['BBH_Hegarty'] text-[clamp(16px,5.5vw,30px)] leading-[clamp(56px,18vw,100px)] font-normal text-[#283618]">
+          <div className="opening-tagline text-center font-['BBH_Hegarty'] font-normal text-[#283618]">
             exploration and wilderness
           </div>
         </>

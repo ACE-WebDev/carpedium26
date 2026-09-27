@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import config from "@/config/ballAnimation";
 import { HERO_VIEW } from "./mazeBallTimeline";
+import { createGlide } from "./scrollGlide";
 
 /*
  * The ball in the Flagship section. It rolls in from off the right edge down
@@ -32,11 +33,13 @@ const FILL = 0.72;
    so a ball wholly below that is hidden wherever it falls. */
 const COVER_TOP = 0.2;
 
-/* Auto mode starts once the bar's low end has been scrolled up to this far
-   down the screen. Scroll mode plays from there until it is this much higher
-   again, as a fraction of the screen height. */
+/* Auto mode starts once the bar's low end has been scrolled up to START_AT
+   of the way down the screen. Scroll mode plays while it goes from
+   SCROLL_FROM to SCROLL_TO of the way down: all the while the bar and the
+   drop below it are in view, so the ball goes no faster than it has to. */
 const START_AT = 0.7;
-const SCROLL_SPAN = 0.5;
+const SCROLL_FROM = 0.9;
+const SCROLL_TO = 0.2;
 
 /* Where a point in an image's own px is, in px within `rootBox`. */
 function pointIn(img, [px, py], size, rootBox) {
@@ -183,29 +186,34 @@ export default function SlopeBall() {
 
     /* ---------------------------------------------------- scroll mode */
 
-    const scrollUpdate = () => {
-      frame = 0;
-      if (!run) return;
-      const vh = window.innerHeight;
-      const p = Math.min(
-        1,
-        Math.max(0, (vh * START_AT - lowEndOnScreen()) / (vh * SCROLL_SPAN))
-      );
-      placeAt(run.tEnter + p * (run.tEnd - run.tEnter));
-    };
+    const glide = createGlide(
+      () => {
+        if (!run) return null;
+        const vh = window.innerHeight;
+        return Math.min(
+          1,
+          Math.max(
+            0,
+            (vh * SCROLL_FROM - lowEndOnScreen()) /
+              (vh * (SCROLL_FROM - SCROLL_TO))
+          )
+        );
+      },
+      (p) => placeAt(run.tEnter + p * (run.tEnd - run.tEnter))
+    );
 
     /* --------------------------------------------------------- shared */
 
     const update = () => {
       if (MODE === "auto") maybeStart();
-      else if (!frame) frame = requestAnimationFrame(scrollUpdate);
+      else glide.update();
     };
 
     // Re-measures, and puts the ball back where it was in its run.
     const relayout = () => {
       measure();
       if (!run) return;
-      if (MODE === "scroll") scrollUpdate();
+      if (MODE === "scroll") glide.jump();
       else if (startedAt === null) ball.style.visibility = "hidden";
       update();
     };
@@ -231,6 +239,7 @@ export default function SlopeBall() {
     return () => {
       clearInterval(settle);
       clearTimeout(startTimer);
+      glide.stop();
       if (frame) cancelAnimationFrame(frame);
       window.removeEventListener("scroll", update);
       window.removeEventListener("resize", relayout);

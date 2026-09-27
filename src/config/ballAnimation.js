@@ -13,7 +13,7 @@ const ballAnimation = {
   //            scroll back up to rewind it. It is paced to stay on screen.
   // "auto"   — the ball falls on its own in real time, starting once the
   //            maze has appeared. Scrolling does not move it.
-  mode: "auto",
+  mode: "scroll",
 
   ball: {
     image: "/ball.png",
@@ -29,7 +29,7 @@ const ballAnimation = {
     startX: 1080,
     // Down from the top of the maze. The first arc is at ~290; much higher
     // than ~200 and it starts partly hidden behind the navbar.
-    startY: 85,
+    startY: 35,
   },
 
   // Spin. 1 = spins exactly as a ball rolling along the surface would.
@@ -118,12 +118,20 @@ const ballAnimation = {
   },
 
   scroll: {
-    // How closely the ball follows the scrollbar. 1 = locked to it exactly;
-    // lower values let it glide behind, smoothing out jerky trackpads.
-    smoothing: 0.15,
+    // How slowly the maze balls move for your scrolling: how much scrolling
+    // each second of a fall takes, in screen heights. Higher = slower. Where
+    // the page on its own does not give a fall that much room (on a phone
+    // the whole maze fits on screen, so it gives next to none), the maze
+    // holds still in view while the ball falls, until it has had it.
+    // 0 = never hold; each fall gets only what the layout gives it.
+    screensPerSecond: 0.4,
+    // How long every scroll-driven ball takes to glide to where the
+    // scrollbar says it should be, in ms, so wheel notches and flicks slide
+    // it there rather than making it jump. 0 = locked to the scrollbar.
+    glideMs: 120,
     // Space kept between the navbar's lowest point and the top of the ball,
     // in screen px, so it is never hidden behind the navbar.
-    navbarMargin: 40,
+    navbarMargin: 24,
   },
 
   // The black circle that grows out of the ball the moment it lands — on
