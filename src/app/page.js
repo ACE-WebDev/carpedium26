@@ -1,6 +1,7 @@
 import Opening from "@/components/opening";
 import HomePage from "@/components/HomePage";
 import Footer from "@/components/Footer";
+import Merch from "@/components/Merch";
 
 export default function Home() {
   return (

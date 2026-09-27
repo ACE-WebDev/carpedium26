@@ -6,11 +6,14 @@ import { loadFall } from "./mazeBallPhysics";
 import {
   HERO_VIEW,
   buildTimeline,
-  buildWarp,
   indexAt,
+  pacedWarp,
   sampleTimeline,
+  steeredWarp,
   withRollIn,
 } from "./mazeBallTimeline";
+import { createGlide } from "./scrollGlide";
+import { navbarBottom, pageTop, pinOf, setPin } from "./BallPin";
 
 /*
  * A ball falling through the maze: a physics simulation (mazeBallPhysics.js)
@@ -25,7 +28,8 @@ import {
  * element (its parent), finds the maze image in it by `data-ball-maze` and
  * the artwork it lands on by `data-ball-target`. `variant` picks one of the
  * setups below — the hero and the Sponsors maze show the same maze, drawn
- * differently.
+ * differently. Inside a BallPin, the scene is held in place while the ball
+ * falls, for as long as scroll mode's pace needs.
  */
 
 const MODE = config.mode === "auto" ? "auto" : "scroll";
@@ -45,30 +49,68 @@ const END_WIDTH = 1440; // endmaze1.png's own width, px
 const END_SCALE = 0.865;
 const END_OFFSET = [-307, -65];
 
-/* How the Sponsors fall is paced against scroll: it starts once the ball
-   has been scrolled up to START_AT of the way down the screen, and lands with
-   the maze end at END_AT. The run after the Sponsors is paced the same way. */
-const SPONSORS_START_AT = 0.3;
-const SPONSORS_END_AT = 0.6;
+/* How the falls further down the page are paced against scroll, where their
+   maze is too tall to be held wholly in view: each starts once the ball has
+   been scrolled up to `startAt` of the way down the screen, and lands with
+   what it lands on at `endAt`. The run after the Sponsors starts lower, so
+   its roll along the bars is not hurried by them reaching the navbar. */
+const SPONSORS_LINES = { startAt: 0.3, endAt: 0.6 };
+const END_LINES = { startAt: 0.6, endAt: 0.6 };
+/* How much further than it must be the fall after another (`after`) waits
+   for that one's ball to be out of sight, as a share of the screen height. */
+const AFTER_GAP = 0.1;
 /* On small screens a whole maze fits in view, which would leave next to no
-   scrolling for its fall, so each always gets at least this much of a screen
-   height. */
+   scrolling for its fall, so when it cannot be held in place each always
+   gets at least this much of a screen height. */
 const MIN_SPAN = 0.45;
 
 /* Both runs drop from the same spot at the top of the maze, so they play the
    very same fall (simulated once, see loadFall). */
 const START = { x: config.ball.startX, y: config.ball.startY };
 
-function scrollRangeBelow({ startY, targetY, minStartLine }) {
+/* Scroll pacing for a maze further down the page. `top0` is where the root's
+   top is on screen when the fall begins and `span` how much the page then
+   scrolls it on by while the ball falls, on top of any time it is held. */
+function scrollRangeBelow({
+  startY,
+  targetY,
+  minStartLine,
+  navBottom,
+  holds,
+  sceneHeight,
+  sceneOffset,
+  earliestTop,
+  lines,
+}) {
   const vh = window.innerHeight;
-  const travel = targetY - startY;
-  let startLine = Math.max(vh * SPONSORS_START_AT, minStartLine);
-  let span = travel - (vh * SPONSORS_END_AT - startLine);
-  if (span < vh * MIN_SPAN) {
-    span = vh * MIN_SPAN;
-    startLine = vh * SPONSORS_END_AT - travel + span;
+  // A scene that fits on screen under the navbar is held there, centred,
+  // for its whole fall. Either way the fall begins no earlier than
+  // `earliestTop` allows: where the root is when the page is scrolled as
+  // little as it can be for the fall to start (right at the top — a blackout
+  // can leave the scene high up — or once what plays before it is over), so
+  // none of it has been scrolled past before it could be seen.
+  const room = vh - navBottom;
+  if (holds && sceneHeight <= room) {
+    return {
+      top0: Math.min(
+        navBottom + (room - sceneHeight) / 2 + sceneOffset,
+        earliestTop
+      ),
+      span: 0,
+    };
   }
-  return { top0: startLine - startY, span };
+  const travel = targetY - startY;
+  let startLine = Math.min(
+    Math.max(vh * lines.startAt, minStartLine),
+    earliestTop + startY
+  );
+  let span = travel - (vh * lines.endAt - startLine);
+  if (!holds && span < vh * MIN_SPAN) {
+    span = vh * MIN_SPAN;
+    // Starting sooner to make room — but never before it may.
+    startLine = Math.min(vh * lines.endAt - travel + span, earliestTop + startY);
+  }
+  return { top0: startLine - startY, span: Math.max(0, span) };
 }
 
 const VARIANTS = {
@@ -77,24 +119,37 @@ const VARIANTS = {
   // blackout takes over.
   hero: {
     start: START,
+    // HERO_VIEW drawn to fill its box, centred across it and from its top
+    // (MazeBall: `xMidYMin slice`) — on a phone the box is narrower than
+    // the view, and its sides are cut off.
     mazeTransform(maze, rootBox) {
       const box = maze.getBoundingClientRect();
-      const scale = box.width / HERO_VIEW.width;
+      const scale = Math.max(
+        box.width / HERO_VIEW.width,
+        box.height / HERO_VIEW.height
+      );
       return {
         scale,
-        offsetX: box.left - rootBox.left - HERO_VIEW.x * scale,
+        offsetX:
+          box.left -
+          rootBox.left +
+          (box.width - HERO_VIEW.width * scale) / 2 -
+          HERO_VIEW.x * scale,
         offsetY: box.top - rootBox.top - HERO_VIEW.y * scale,
       };
     },
     // From the hero's top at the top of the viewport to the bottom of About
-    // Us at its bottom.
-    scrollRange: ({ rootBox }) => ({
-      top0: 0,
-      span: Math.max(
-        rootBox.height - window.innerHeight,
-        window.innerHeight * MIN_SPAN
-      ),
-    }),
+    // Us at its bottom — none at all when it all fits on screen and is held
+    // there instead.
+    scrollRange: ({ rootBox, holds }) => {
+      const below = rootBox.height - window.innerHeight;
+      return {
+        top0: 0,
+        span: holds
+          ? Math.max(0, below)
+          : Math.max(below, window.innerHeight * MIN_SPAN),
+      };
+    },
     // Once the opening sequence has handed over to the page.
     autoReady: () => document.body.classList.contains("opening-done"),
     announce: true,
@@ -115,7 +170,13 @@ const VARIANTS = {
         offsetY: box.top - rootBox.top + SPONSORS_OFFSET[1] * k,
       };
     },
-    scrollRange: scrollRangeBelow,
+    scrollRange: (args) => scrollRangeBelow({ ...args, lines: SPONSORS_LINES }),
+    // Kept up to a fifth of the screen further below the navbar than it
+    // must be, held for at least 60% of its fall, and steered steadily down
+    // the screen (see layout).
+    comfort: 0.2,
+    minHold: 0.6,
+    steer: true,
     // Once the ball has been scrolled into the upper part of the screen.
     autoReady: ({ startScreenY }) => startScreenY <= window.innerHeight * 0.6,
     announce: true,
@@ -158,7 +219,13 @@ const VARIANTS = {
     artOf: maskImageOf,
     // Shrinks away to nothing once it has landed on the logo.
     vanishMs: config.end.vanishMs,
-    scrollRange: scrollRangeBelow,
+    // Not before the ball in the lanes above has run its course and gone
+    // (MazeRun marks where that is), so the two never play at once.
+    after: "[data-run-end]",
+    scrollRange: (args) => scrollRangeBelow({ ...args, lines: END_LINES }),
+    comfort: 0.2,
+    minHold: 0.6,
+    steer: true,
     autoReady: ({ startScreenY }) => startScreenY <= window.innerHeight * 0.6,
     announce: false,
   },
@@ -179,20 +246,6 @@ if (typeof window !== "undefined") {
       () => {}
     );
   }
-}
-
-/* Where the fixed navbar ends, plus the configured margin, in px from the
-   top of the viewport. Measured rather than assumed: its logo oval hangs
-   below the bar, right where the ball falls, and both scale with the
-   viewport. 150 is the fallback if it cannot be found. */
-function navbarClearance() {
-  const nav = document.querySelector("nav");
-  if (!nav) return 150;
-  let bottom = nav.getBoundingClientRect().bottom;
-  for (const el of nav.querySelectorAll("*")) {
-    bottom = Math.max(bottom, el.getBoundingClientRect().bottom);
-  }
-  return bottom + config.scroll.navbarMargin;
 }
 
 /* The image an element is masked with (`mask: url(...)`), loaded into an
@@ -296,6 +349,7 @@ export default function BallFall({ variant }) {
     if (setup.vanishMs && !reduced.matches) {
       shrink.style.transition = `transform ${setup.vanishMs}ms ease-in`;
     }
+    const pin = pinOf(root);
     let disposed = false;
     let sim = null;
     // Where `sim` starts, or the fall being simulated will.
@@ -352,27 +406,6 @@ export default function BallFall({ variant }) {
         (endY - offsetY) / scale
       );
 
-      // Scroll pacing: `top0` is where the root's top is on screen when the
-      // fall begins, `span` how much scrolling it takes.
-      const clearance = navbarClearance();
-      const startY = start.y * scale + offsetY;
-      const { top0, span } = setup.scrollRange({
-        rootBox,
-        startY,
-        targetY: endY,
-        minStartLine: clearance + size / 2,
-      });
-      const warp =
-        MODE === "scroll"
-          ? buildWarp(timeline, {
-              scale,
-              span,
-              originY: top0 + offsetY,
-              clearance,
-              ballSize: config.ball.size,
-            })
-          : null;
-
       // Where in the fall it first touches the landing art. Read the art's
       // pixels once per image it loads.
       const artImage = target && (setup.artOf ? setup.artOf(target) : target);
@@ -396,6 +429,87 @@ export default function BallFall({ variant }) {
           )
         : timeline.count - 1;
 
+      // Scroll pacing. `top0` is where the root's top is on screen when the
+      // fall begins. Its scene is then held there for the first `hold` px
+      // of scrolling, where it can be, and moves on with the page for the
+      // rest of `span`, until the ball touches down.
+      const vh = window.innerHeight;
+      const navBottom = navbarBottom();
+      const clearance = navBottom + config.scroll.navbarMargin;
+      const holds =
+        MODE === "scroll" &&
+        !!pin &&
+        !reduced.matches &&
+        config.scroll.screensPerSecond > 0;
+      const sceneBox = pin ? pin.sticky.getBoundingClientRect() : rootBox;
+      const sceneOffset = rootBox.top - sceneBox.top;
+      const startY = start.y * scale + offsetY;
+      // How far the page must be scrolled before this fall may begin: far
+      // enough for what plays before it (`after`) to be over, and a little
+      // further, as that ball glides a moment behind the scroll — else not
+      // at all.
+      const runEnd = setup.after
+        ? Number(document.querySelector(setup.after)?.dataset.runEnd)
+        : NaN;
+      const notBefore = Number.isFinite(runEnd) ? runEnd + vh * AFTER_GAP : 0;
+      const range = setup.scrollRange({
+        rootBox,
+        startY,
+        targetY: endY,
+        minStartLine: clearance + size / 2,
+        navBottom,
+        holds,
+        sceneHeight: sceneBox.height,
+        sceneOffset,
+        earliestTop:
+          (pin ? pageTop(pin.track) + sceneOffset : pageTop(root)) -
+          notBefore,
+      });
+      // Held for however much longer the configured pace wants than the
+      // page gives it — and, where the variant asks (`minHold`), for at
+      // least that share of it anyway: without, the page carries the maze
+      // off while the ball is still rolling about its upper arcs, and it
+      // has to be hurried along after it.
+      let hold = 0;
+      if (holds) {
+        const wanted =
+          touchIndex * timeline.dt * config.scroll.screensPerSecond * vh;
+        hold = Math.max(0, wanted - range.span, wanted * (setup.minHold ?? 0));
+      }
+      const span = Math.max(1, range.span + hold);
+      // How much further below the navbar than it must be the ball is kept
+      // (`comfort`, a share of the screen), so it does not ride along its
+      // edge while the page carries the maze up — though never higher than
+      // where it sets off, so none of its start is skipped.
+      const comfort = setup.comfort
+        ? Math.min(
+            setup.comfort * vh,
+            Math.max(0, range.top0 + startY - size / 2 - clearance)
+          )
+        : 0;
+      const pacing = {
+        scale,
+        span,
+        hold,
+        originY: range.top0 + offsetY,
+        clearance: clearance + comfort,
+        bottom: vh - 8,
+        ballSize: config.ball.size,
+        endIndex: touchIndex,
+      };
+      // Steered steadily down the screen, held from the start (`steer`), or
+      // paced by buildWarp with the hold wherever it plays most evenly.
+      const { warp, holdAt } =
+        MODE !== "scroll"
+          ? { warp: null, holdAt: 0 }
+          : setup.steer
+            ? { warp: steeredWarp(timeline, pacing), holdAt: 0 }
+            : pacedWarp(timeline, pacing);
+      // The hold begins `holdAt` px into the fall, where the scene has been
+      // scrolled that much further up (a negative `top` sticks it partly
+      // above the screen, for a scene taller than it).
+      if (pin) setPin(pin, range.top0 - sceneOffset - holdAt, hold);
+
       geometry = {
         scale,
         offsetX,
@@ -405,9 +519,11 @@ export default function BallFall({ variant }) {
         size,
         target,
         touchIndex,
-        top0,
+        top0: range.top0,
         span,
+        sceneOffset,
         startY,
+        notBefore,
       };
     };
 
@@ -438,11 +554,15 @@ export default function BallFall({ variant }) {
       if (setup.vanishMs) shrink.style.transform = touched ? "scale(0)" : "";
     };
 
-    // How far through its scroll range the page is, 0 to 1.
+    // How far through its scroll range the page is, 0 to 1. Measured from
+    // where the root would be if its scene were never held: the track the
+    // scene is held in always moves with the page.
     const scrollProgress = () => {
-      const { top0, span } = geometry;
-      const top = root.getBoundingClientRect().top;
-      return span > 0 ? Math.min(1, Math.max(0, (top0 - top) / span)) : 0;
+      const { top0, span, sceneOffset } = geometry;
+      const top = pin
+        ? pin.track.getBoundingClientRect().top + sceneOffset
+        : root.getBoundingClientRect().top;
+      return Math.min(1, Math.max(0, (top0 - top) / span));
     };
 
     // The moment the ball touches its landing art: announced once, with
@@ -468,30 +588,25 @@ export default function BallFall({ variant }) {
 
     /* ---------------------------------------------------- scroll mode */
 
-    let frame = 0;
-    let shown = 0;
-
-    const scrollUpdate = () => {
-      frame = 0;
-      if (!geometry) return;
-      if (arrivedAt !== null) {
-        placeAt(arrivedAt);
-        return;
+    // Glides toward the scroll position rather than snapping, so flicks and
+    // trackpad jitter do not make the ball twitch.
+    const glide = createGlide(
+      () => (geometry && arrivedAt === null ? scrollProgress() : null),
+      (progress) => {
+        const index = indexAt(geometry.warp, progress);
+        // It lands at the end of its fall — or as soon as the page has been
+        // scrolled past that, without waiting for the glide to catch up, as
+        // by then where it lands is on its way off the screen.
+        if (
+          setup.announce &&
+          (index >= geometry.touchIndex || scrollProgress() >= 1)
+        ) {
+          arrive();
+        }
+        // Otherwise it rests on the art, and scrolling back up rewinds it.
+        else placeAt(Math.min(index, geometry.touchIndex));
       }
-      // Glide toward the scroll position rather than snapping, so flicks
-      // and trackpad jitter do not make the ball twitch.
-      const target = scrollProgress();
-      shown += (target - shown) * config.scroll.smoothing;
-      if (Math.abs(target - shown) > 0.0005) {
-        frame = requestAnimationFrame(scrollUpdate);
-      } else {
-        shown = target;
-      }
-      const index = indexAt(geometry.warp, shown);
-      if (setup.announce && index >= geometry.touchIndex) arrive();
-      // Otherwise it rests on the art, and scrolling back up rewinds it.
-      else placeAt(Math.min(index, geometry.touchIndex));
-    };
+    );
 
     /* ------------------------------------------------------ auto mode */
 
@@ -541,6 +656,9 @@ export default function BallFall({ variant }) {
       if (startedAt !== null || startTimer || !geometry) return;
       const startScreenY = root.getBoundingClientRect().top + geometry.startY;
       if (!setup.autoReady({ startScreenY })) return;
+      // Nor while what plays before it is still going.
+      const scrolled = -document.body.getBoundingClientRect().top;
+      if (scrolled < geometry.notBefore) return;
       startTimer = window.setTimeout(() => {
         startedAt = performance.now();
         autoFrame = requestAnimationFrame(autoTick);
@@ -552,26 +670,26 @@ export default function BallFall({ variant }) {
     const onScroll = () => {
       if (reduced.matches) return; // the ball just rests at the end
       if (MODE === "auto") maybeStartAuto();
-      else if (!frame) frame = requestAnimationFrame(scrollUpdate);
+      else glide.update();
     };
 
     // Re-measures, then puts the ball straight where it belongs rather than
     // gliding to it — right for first paint and for resizes.
     const relayout = () => {
+      // Once it has landed for a blackout, nothing moves: the blackout pins
+      // the body, which would read as the page having scrolled.
+      if (arrivedAt !== null) return;
       layout();
       if (!geometry) return;
       if (reduced.matches) {
         placeAt(restIndex());
-      } else if (arrivedAt !== null) {
-        placeAt(arrivedAt);
       } else if (landed) {
         placeAt(geometry.touchIndex);
       } else if (MODE === "auto") {
         placeAt(Math.min(autoIndex(performance.now()), geometry.touchIndex));
         maybeStartAuto();
       } else {
-        shown = scrollProgress();
-        placeAt(Math.min(indexAt(geometry.warp, shown), geometry.touchIndex));
+        glide.jump();
       }
     };
 
@@ -626,6 +744,8 @@ export default function BallFall({ variant }) {
 
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", relayout);
+    // What plays before it has been re-paced: when this may start moves.
+    if (setup.after) window.addEventListener("ballrun:paced", relayout);
     const observer = new ResizeObserver(relayout);
     observer.observe(root);
 
@@ -633,10 +753,11 @@ export default function BallFall({ variant }) {
       disposed = true;
       clearInterval(settle);
       clearTimeout(startTimer);
-      if (frame) cancelAnimationFrame(frame);
+      glide.stop();
       if (autoFrame) cancelAnimationFrame(autoFrame);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", relayout);
+      window.removeEventListener("ballrun:paced", relayout);
       observer.disconnect();
     };
   }, [variant]);
