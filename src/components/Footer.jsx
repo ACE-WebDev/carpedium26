@@ -10,7 +10,7 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="relative w-full bg-[#EDD4A3] px-8 md:px-20 py-16 flex flex-col justify-between" style={{ backgroundImage: "url('/footerbg.png')" }}>
+    <footer className="relative w-full bg-[#EDD4A3] px-8 md:px-20 py-16 flex flex-col justify-between">
       <div>
         {/* Contact us: DELIRIUM NVC, Weight 400, Size 71.19px */}
         <h2 

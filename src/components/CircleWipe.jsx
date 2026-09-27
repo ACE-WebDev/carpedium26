@@ -11,10 +11,11 @@ import config from "@/config/ballAnimation";
  *
  * A black circle grows from where the ball came to rest until it covers the
  * screen; at that point `onCovered` runs, which is where the caller tears
- * down everything above the section being revealed; then the circle shrinks
- * away to reveal what is left. The page is held still while it plays —
- * otherwise removing that much of the document would yank the viewport — and
- * released as soon as the circle is gone.
+ * down everything above the Intro section; then the circle shrinks away to
+ * reveal what is left. `onDone` runs once the shrink has finished and the
+ * circle is gone. The page is held still while it plays — otherwise
+ * removing that much of the document would yank the viewport — and released
+ * as soon as the circle is gone.
  *
  * The circle is a fixed-size div scaled with `transform`, rather than an
  * animated `clip-path` or a custom property: transforms are interpolable
@@ -75,7 +76,7 @@ function lockScroll() {
   };
 }
 
-export default function CircleWipe({ trigger, originRef, onCovered }) {
+export default function CircleWipe({ trigger = "hero", originRef, onCovered, onDone }) {
   // `grown` is separate from the phase so the circle can mount at scale 0
   // and be scaled up on a later frame. Setting the final transform on the
   // very first render gives the browser no value to animate from, and the
@@ -85,6 +86,12 @@ export default function CircleWipe({ trigger, originRef, onCovered }) {
   const [origin, setOrigin] = useState(null);
   const timers = useRef([]);
   const played = useRef(false);
+
+  // Always call the latest onDone without making `play` depend on it.
+  const onDoneRef = useRef(onDone);
+  useEffect(() => {
+    onDoneRef.current = onDone;
+  }, [onDone]);
 
   useEffect(
     () => () => timers.current.forEach(clearTimeout),
@@ -118,6 +125,7 @@ export default function CircleWipe({ trigger, originRef, onCovered }) {
       onCovered?.();
       window.scrollTo(0, 0);
       setPhase("done");
+      onDoneRef.current?.();
       return;
     }
 
@@ -141,7 +149,12 @@ export default function CircleWipe({ trigger, originRef, onCovered }) {
         unlock(0);
         setPhase("shrink");
         setGrown(false);
-        timers.current.push(setTimeout(() => setPhase("done"), SHRINK_MS));
+        timers.current.push(
+          setTimeout(() => {
+            setPhase("done");
+            onDoneRef.current?.(); // the circle is gone: the wipe is complete
+          }, SHRINK_MS)
+        );
       }, GROW_MS + HOLD_MS)
     );
   }, [originRef, onCovered]);
