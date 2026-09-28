@@ -1,8 +1,9 @@
-"use client";
-import { useState, useEffect } from "react";
+'use client';
+import { useState, useEffect } from 'react';
 const assetPathPrefix = '/merch';
 
-const imgBackside1 = `${assetPathPrefix}/ae0a9.png`;
+const imgBackside1 = `${assetPathPrefix}/front.png`;
+const imgBackside2 = `${assetPathPrefix}/back.png`;
 const imgRectangle94 = `${assetPathPrefix}/101a5.png`;
 const imgHeaderCircle = `${assetPathPrefix}/46e3a.svg`;
 const imgGroup112 = `${assetPathPrefix}/96c34.svg`;
@@ -21,6 +22,7 @@ const H = 1950;
 
 export default function Merch() {
   const [scale, setScale] = useState(1);
+  const [isShirtHovered, setIsShirtHovered] = useState(false);
 
   useEffect(() => {
     const updateScale = () => {
@@ -32,8 +34,8 @@ export default function Merch() {
       }
     };
     updateScale();
-    window.addEventListener("resize", updateScale);
-    return () => window.removeEventListener("resize", updateScale);
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
   }, []);
 
   return (
@@ -71,51 +73,62 @@ export default function Merch() {
             flexShrink: 0,
           }}
         >
-            {/* ── Gradient band ── */}
+          {/* ── Gradient band ── */}
+          <div
+            style={{
+              position: 'absolute',
+              background: 'linear-gradient(to bottom, rgba(239,212,163,0.25) 0%, #dfc298 94.231%)',
+              borderRadius: 20,
+              height: 1115,
+              left: -219,
+              top: 110,
+              width: 1853,
+              pointerEvents: 'none',
+            }}
+          />
+
+          {/* ── OUR MERCH heading ── */}
+          <h1
+            style={{
+              position: 'absolute',
+              fontFamily: '"BBH Hegarty", sans-serif',
+              fontWeight: 400,
+              fontSize: 180,
+              lineHeight: 'normal',
+              color: '#283618',
+              left: 'calc(50% - 629px)',
+              top: 70,
+              whiteSpace: 'nowrap',
+              margin: 0,
+            }}
+          >
+            OUR MERCH
+          </h1>
+
+          <div
+            onMouseEnter={() => setIsShirtHovered(true)}
+            onMouseLeave={() => setIsShirtHovered(false)}
+            style={{
+              position: 'absolute',
+              width: 605,
+              height: 980,
+              left: 'calc(50% - 302.5px)',
+              top: 311,
+              perspective: 1500,
+            }}
+          >
             <div
               style={{
-                position: 'absolute',
-                background:
-                  'linear-gradient(to bottom, rgba(239,212,163,0.25) 0%, #dfc298 94.231%)',
-                borderRadius: 20,
-                height: 1115,
-                left: -219,
-                top: 110,
-                width: 1853,
-                pointerEvents: 'none',
-              }}
-            />
-
-            {/* ── OUR MERCH heading ── */}
-            <h1
-              style={{
-                position: 'absolute',
-                fontFamily: '"BBH Hegarty", sans-serif',
-                fontWeight: 400,
-                fontSize: 180,
-                lineHeight: 'normal',
-                color: '#283618',
-                left: 'calc(50% - 629px)',
-                top: 70,
-                whiteSpace: 'nowrap',
-                margin: 0,
-              }}
-            >
-              OUR MERCH
-            </h1>
-
-            {/* ── T-shirt ── */}
-            <div
-              style={{
-                position: 'absolute',
-                width: 605,
-                height: 980,
-                left: 'calc(50% - 302.5px)',
-                top: 311,
+                position: 'relative',
+                width: '100%',
+                height: '100%',
+                transformStyle: 'preserve-3d',
+                transition: 'transform 0.6s ease',
+                transform: isShirtHovered ? 'rotateY(180deg)' : 'rotateY(0deg)',
               }}
             >
               <img
-                alt="Merch T-shirt"
+                alt="Front"
                 src={imgBackside1}
                 style={{
                   position: 'absolute',
@@ -123,585 +136,601 @@ export default function Merch() {
                   width: '100%',
                   height: '100%',
                   objectFit: 'contain',
+                  backfaceVisibility: 'hidden',
+                  pointerEvents: 'none',
+                }}
+              />
+              <img
+                alt="Back"
+                src={imgBackside2}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  backfaceVisibility: 'hidden',
+                  transform: 'rotateY(180deg)',
                   pointerEvents: 'none',
                 }}
               />
             </div>
+          </div>
 
-            {/* ── Left annotation ── */}
+          {/* ── Left annotation ── */}
+          <p
+            style={{
+              position: 'absolute',
+              fontFamily: '"Bricolage Grotesque", sans-serif',
+              fontWeight: 400,
+              fontSize: 40,
+              lineHeight: 'normal',
+              color: '#000',
+              left: 134,
+              top: 417,
+              width: 366,
+              whiteSpace: 'pre-wrap',
+              margin: 0,
+            }}
+          >
+            {'Designed by 300dpi '}
+          </p>
+
+          {/* ── Right annotation ── */}
+          <div
+            style={{
+              position: 'absolute',
+              fontFamily: '"Bricolage Grotesque", sans-serif',
+              fontWeight: 400,
+              fontSize: 40,
+              lineHeight: 0,
+              color: '#000',
+              right: 87,
+              top: 559,
+              width: 366,
+              textAlign: 'right',
+              whiteSpace: 'pre-wrap',
+            }}
+          >
             <p
               style={{
-                position: 'absolute',
-                fontFamily: '"Bricolage Grotesque", sans-serif',
-                fontWeight: 400,
-                fontSize: 40,
                 lineHeight: 'normal',
-                color: '#000',
-                left: 134,
-                top: 417,
-                width: 366,
-                whiteSpace: 'pre-wrap',
                 margin: 0,
               }}
             >
-              {'Designed by 300dpi '}
+              {'Marketed by '}
             </p>
 
-            {/* ── Right annotation ── */}
-            <div
+            <p
               style={{
-                position: 'absolute',
-                fontFamily: '"Bricolage Grotesque", sans-serif',
-                fontWeight: 400,
-                fontSize: 40,
-                lineHeight: 0,
-                color: '#000',
-                right: 87,
-                top: 559,
-                width: 366,
-                textAlign: 'right',
-                whiteSpace: 'pre-wrap',
+                lineHeight: 'normal',
+                margin: 0,
               }}
             >
-              <p
-                style={{
-                  lineHeight: 'normal',
-                  margin: 0,
-                }}
-              >
-                {'Marketed by '}
-              </p>
+              ks merchandise
+            </p>
+          </div>
 
-              <p
-                style={{
-                  lineHeight: 'normal',
-                  margin: 0,
-                }}
-              >
-                ks merchandise
-              </p>
-            </div>
-
-            {/* ── Line 10 ── */}
+          {/* ── Line 10 ── */}
+          <div
+            style={{
+              position: 'absolute',
+              display: 'flex',
+              height: 61,
+              alignItems: 'center',
+              justifyContent: 'center',
+              left: `calc(16.67% + 236.16px)`,
+              top: 490.25,
+              width: 91,
+            }}
+          >
             <div
               style={{
-                position: 'absolute',
-                display: 'flex',
-                height: 61,
-                alignItems: 'center',
-                justifyContent: 'center',
-                left: `calc(16.67% + 236.16px)`,
-                top: 490.25,
-                width: 91,
+                transform: 'rotate(-146.16deg)',
               }}
             >
               <div
                 style={{
-                  transform: 'rotate(-146.16deg)',
+                  height: 0,
+                  position: 'relative',
+                  width: 109.554,
                 }}
               >
                 <div
                   style={{
-                    height: 0,
-                    position: 'relative',
-                    width: 109.554,
+                    position: 'absolute',
+                    inset: '-1.5px -1.37%',
                   }}
                 >
-                  <div
+                  <img
+                    src={imgLine10}
+                    alt=""
                     style={{
-                      position: 'absolute',
-                      inset: '-1.5px -1.37%',
+                      display: 'block',
+                      maxWidth: 'none',
+                      width: '100%',
+                      height: '100%',
                     }}
-                  >
-                    <img
-                      src={imgLine10}
-                      alt=""
-                      style={{
-                        display: 'block',
-                        maxWidth: 'none',
-                        width: '100%',
-                        height: '100%',
-                      }}
-                    />
-                  </div>
+                  />
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* ── Line 11 ── */}
+          {/* ── Line 11 ── */}
+          <div
+            style={{
+              position: 'absolute',
+              display: 'flex',
+              height: 0,
+              alignItems: 'center',
+              justifyContent: 'center',
+              left: `calc(16.67% + 111px)`,
+              top: 490.5,
+              width: 127,
+            }}
+          >
             <div
               style={{
-                position: 'absolute',
-                display: 'flex',
-                height: 0,
-                alignItems: 'center',
-                justifyContent: 'center',
-                left: `calc(16.67% + 111px)`,
-                top: 490.5,
-                width: 127,
+                transform: 'rotate(180deg)',
               }}
             >
               <div
                 style={{
-                  transform: 'rotate(180deg)',
+                  height: 0,
+                  position: 'relative',
+                  width: 127,
                 }}
               >
                 <div
                   style={{
-                    height: 0,
-                    position: 'relative',
-                    width: 127,
+                    position: 'absolute',
+                    inset: '-1.5px -1.18%',
                   }}
                 >
-                  <div
+                  <img
+                    src={imgLine11}
+                    alt=""
                     style={{
-                      position: 'absolute',
-                      inset: '-1.5px -1.18%',
+                      display: 'block',
+                      maxWidth: 'none',
+                      width: '100%',
+                      height: '100%',
                     }}
-                  >
-                    <img
-                      src={imgLine11}
-                      alt=""
-                      style={{
-                        display: 'block',
-                        maxWidth: 'none',
-                        width: '100%',
-                        height: '100%',
-                      }}
-                    />
-                  </div>
+                  />
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* ── Line 12 ── */}
+          {/* ── Line 12 ── */}
+          <div
+            style={{
+              position: 'absolute',
+              height: 50.594,
+              left: `calc(50% + 195.69px)`,
+              top: 653,
+              width: 75.476,
+            }}
+          >
             <div
               style={{
-                position: 'absolute',
-                height: 50.594,
-                left: `calc(50% + 195.69px)`,
-                top: 653,
-                width: 75.476,
+                transform: 'scaleY(-1) rotate(33.84deg)',
+                transformOrigin: 'left center',
               }}
             >
               <div
                 style={{
-                  transform: 'scaleY(-1) rotate(33.84deg)',
-                  transformOrigin: 'left center',
+                  height: 0,
+                  position: 'relative',
+                  width: 90.865,
                 }}
               >
                 <div
                   style={{
-                    height: 0,
-                    position: 'relative',
-                    width: 90.865,
+                    position: 'absolute',
+                    inset: '-1.58px -1.73%',
                   }}
                 >
-                  <div
+                  <img
+                    src={imgLine12}
+                    alt=""
                     style={{
-                      position: 'absolute',
-                      inset: '-1.58px -1.73%',
+                      display: 'block',
+                      maxWidth: 'none',
+                      width: '100%',
+                      height: '100%',
                     }}
-                  >
-                    <img
-                      src={imgLine12}
-                      alt=""
-                      style={{
-                        display: 'block',
-                        maxWidth: 'none',
-                        width: '100%',
-                        height: '100%',
-                      }}
-                    />
-                  </div>
+                  />
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* ── Line 13 ── */}
+          {/* ── Line 13 ── */}
+          <div
+            style={{
+              position: 'absolute',
+              height: 0,
+              left: `calc(66.67% + 30.61px)`,
+              top: 601.17,
+              width: 69.503,
+            }}
+          >
             <div
               style={{
                 position: 'absolute',
-                height: 0,
-                left: `calc(66.67% + 30.61px)`,
-                top: 601.17,
-                width: 69.503,
-              }}
-            >
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: '-1.51px -2.18%',
-                  transform: 'scaleX(-1)',
-                  transformOrigin: 'center',
-                }}
-              >
-                <img
-                  src={imgLine13}
-                  alt=""
-                  style={{
-                    display: 'block',
-                    maxWidth: 'none',
-                    width: '100%',
-                    height: '100%',
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* ── Price tag ── */}
-            <div
-              style={{
-                position: 'absolute',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                left: `calc(50% + 149px)`,
-                width: 131.048,
-                height: 131.048,
-                top: 941,
-              }}
-            >
-              <div
-                style={{
-                  transform: 'rotate(-15deg)',
-                }}
-              >
-                <div
-                  style={{
-                    overflow: 'hidden',
-                    position: 'relative',
-                    width: 107,
-                    height: 107,
-                  }}
-                >
-                  <div
-                    style={{
-                      position: 'absolute',
-                      inset: '0.05% 0 0.04% 0',
-                    }}
-                  >
-                    <img
-                      src={imgPriceTagGreen}
-                      alt=""
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        maxWidth: 'none',
-                        width: '100%',
-                        height: '100%',
-                      }}
-                    />
-                  </div>
-
-                  <div
-                    style={{
-                      position: 'absolute',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      inset: '10.77% 17.71% 14.58% 10.44%',
-                    }}
-                  >
-                    <div
-                      style={{
-                        transform: 'rotate(48.1deg)',
-                      }}
-                    >
-                      <p
-                        style={{
-                          fontFamily: '"Bricolage Grotesque", sans-serif',
-                          fontWeight: 400,
-                          fontSize: 30,
-                          lineHeight: 'normal',
-                          color: '#000',
-                          textAlign: 'right',
-                          whiteSpace: 'nowrap',
-                          margin: 0,
-                        }}
-                      >
-                        ₹300
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ── Plant: Group112 ── */}
-            <div
-              style={{
-                position: 'absolute',
-                top: `${(44.07 * H) / 100}px`,
-                right: `${(73.42 * W) / 100}px`,
-                bottom: `${(40 * H) / 100}px`,
-                left: 0,
+                inset: '-1.51px -2.18%',
+                transform: 'scaleX(-1)',
+                transformOrigin: 'center',
               }}
             >
               <img
-                src={imgGroup112}
+                src={imgLine13}
                 alt=""
                 style={{
-                  position: 'absolute',
-                  inset: 0,
+                  display: 'block',
                   maxWidth: 'none',
                   width: '100%',
                   height: '100%',
                 }}
               />
             </div>
+          </div>
 
-            {/* ── Plant: Group39574 ── */}
+          {/* ── Price tag ── */}
+          <div
+            style={{
+              position: 'absolute',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              left: `calc(50% + 149px)`,
+              width: 131.048,
+              height: 131.048,
+              top: 941,
+            }}
+          >
             <div
               style={{
-                position: 'absolute',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                top: `${(42.57 * H) / 100}px`,
-                right: `${(78.38 * W) / 100}px`,
-                bottom: `${(35 * H) / 100}px`,
-                left: `${(-11.11 * W) / 100}px`,
+                transform: 'rotate(-15deg)',
               }}
             >
               <div
                 style={{
-                  transform: 'rotate(-19.06deg)',
-                  flexShrink: 0,
+                  overflow: 'hidden',
+                  position: 'relative',
+                  width: 107,
+                  height: 107,
                 }}
               >
-                <img
-                  src={imgGroup39574}
-                  alt=""
-                  style={{
-                    display: 'block',
-                    maxWidth: 'none',
-                    width: '100%',
-                    height: '100%',
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* ── Plant: Group39575 ── */}
-            <div
-              style={{
-                position: 'absolute',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                top: `${(45.7 * H) / 100}px`,
-                right: `${(0.78 * W) / 100}px`,
-                bottom: `${(40 * H) / 100}px`,
-                left: `${(74.1 * W) / 100}px`,
-              }}
-            >
-              <div
-                style={{
-                  transform: 'rotate(3.45deg)',
-                  flexShrink: 0,
-                }}
-              >
-                <img
-                  src={imgGroup39575}
-                  alt=""
-                  style={{
-                    display: 'block',
-                    maxWidth: 'none',
-                    width: '100%',
-                    height: '100%',
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* ── Plant: Group39576 ── */}
-            <div
-              style={{
-                position: 'absolute',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                top: `${(46.82 * H) / 100}px`,
-                right: `${(2.38 * W) / 100}px`,
-                bottom: `${(40 * H) / 100}px`,
-                left: `${(72.5 * W) / 100}px`,
-              }}
-            >
-              <div
-                style={{
-                  transform: 'scaleX(-1) rotate(-3.45deg)',
-                  flexShrink: 0,
-                }}
-              >
-                <img
-                  src={imgGroup39576}
-                  alt=""
-                  style={{
-                    display: 'block',
-                    maxWidth: 'none',
-                    width: '100%',
-                    height: '100%',
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* ── Plant: Group39577 ── */}
-            <div
-              style={{
-                position: 'absolute',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                top: `${(45.42 * H) / 100}px`,
-                right: `${(-1.26 * W) / 100}px`,
-                bottom: `${(40 * H) / 100}px`,
-                left: `${(75.14 * W) / 100}px`,
-              }}
-            >
-              <div
-                style={{
-                  transform: 'scaleX(-1) rotate(6.49deg)',
-                  flexShrink: 0,
-                }}
-              >
-                <img
-                  src={imgGroup39577}
-                  alt=""
-                  style={{
-                    display: 'block',
-                    maxWidth: 'none',
-                    width: '100%',
-                    height: '100%',
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* ── SIZE CHARTS dark banner ── */}
-            <div
-              style={{
-                position: 'absolute',
-                background: '#283618',
-                height: 118,
-                left: 74,
-                borderRadius: 20,
-                top: 1162,
-                width: 1288,
-              }}
-            />
-
-            <p
-              style={{
-                position: 'absolute',
-                fontFamily: '"BBH Hegarty", sans-serif',
-                fontWeight: 400,
-                fontSize: 48,
-                lineHeight: 'normal',
-                color: '#fff',
-                height: 48,
-                left: 'calc(50% - 189px)',
-                top: 1194,
-                width: 377,
-                margin: 0,
-              }}
-            >
-              SIZE CHARTS
-            </p>
-
-            {/* ── SIZE CHARTS green body ── */}
-            <div
-              style={{
-                position: 'absolute',
-                background: '#606c38',
-                height: 402,
-                left: 74,
-                borderRadius: 20,
-                top: 1297,
-                width: 1288,
-              }}
-            />
-
-            {/* ── Size items ── */}
-            {[
-              { label: 'XS', boxTop: 1328, textTop: 1331.14 },
-              { label: 'S', boxTop: 1376.67, textTop: 1380.59 },
-              { label: 'M', boxTop: 1426.12, textTop: 1429.26 },
-              { label: 'L', boxTop: 1474.78, textTop: 1477.92 },
-              { label: 'XL', boxTop: 1524.24, textTop: 1528.16 },
-              { label: '2XL', boxTop: 1572.9, textTop: 1576.04 },
-              { label: '3XL', boxTop: 1622.36, textTop: 1625.5 },
-            ].map(({ label, boxTop, textTop }) => (
-              <div key={label}>
                 <div
                   style={{
                     position: 'absolute',
-                    background: '#45582d',
-                    height: 43.172,
-                    left: 110,
-                    top: boxTop,
-                    width: 85,
+                    inset: '0.05% 0 0.04% 0',
                   }}
-                />
+                >
+                  <img
+                    src={imgPriceTagGreen}
+                    alt=""
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      maxWidth: 'none',
+                      width: '100%',
+                      height: '100%',
+                    }}
+                  />
+                </div>
 
-                <p
+                <div
                   style={{
                     position: 'absolute',
-                    fontFamily: '"BBH Hegarty", sans-serif',
-                    fontWeight: 400,
-                    fontSize: 28.258,
-                    lineHeight: 'normal',
-                    color: '#fff',
-                    top: textTop,
-                    left: 124,
-                    margin: 0,
-                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    inset: '10.77% 17.71% 14.58% 10.44%',
                   }}
                 >
-                  {label}
-                </p>
+                  <div
+                    style={{
+                      transform: 'rotate(48.1deg)',
+                    }}
+                  >
+                    <p
+                      style={{
+                        fontFamily: '"Bricolage Grotesque", sans-serif',
+                        fontWeight: 400,
+                        fontSize: 30,
+                        lineHeight: 'normal',
+                        color: '#000',
+                        textAlign: 'right',
+                        whiteSpace: 'nowrap',
+                        margin: 0,
+                      }}
+                    >
+                      ₹300
+                    </p>
+                  </div>
+                </div>
               </div>
-            ))}
+            </div>
+          </div>
 
-            {/* ── BUY NOW button ── */}
-            <div
+          {/* ── Plant: Group112 ── */}
+          <div
+            style={{
+              position: 'absolute',
+              top: `${(44.07 * H) / 100}px`,
+              right: `${(73.42 * W) / 100}px`,
+              bottom: `${(40 * H) / 100}px`,
+              left: 0,
+            }}
+          >
+            <img
+              src={imgGroup112}
+              alt=""
               style={{
                 position: 'absolute',
-                left: 'calc(50% - 151.5px)',
-                top: 1765,
+                inset: 0,
+                maxWidth: 'none',
+                width: '100%',
+                height: '100%',
+              }}
+            />
+          </div>
+
+          {/* ── Plant: Group39574 ── */}
+          <div
+            style={{
+              position: 'absolute',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              top: `${(42.57 * H) / 100}px`,
+              right: `${(78.38 * W) / 100}px`,
+              bottom: `${(35 * H) / 100}px`,
+              left: `${(-11.11 * W) / 100}px`,
+            }}
+          >
+            <div
+              style={{
+                transform: 'rotate(-19.06deg)',
+                flexShrink: 0,
               }}
             >
-              <button
+              <img
+                src={imgGroup39574}
+                alt=""
                 style={{
-                  background: '#1c1f2a',
-                  borderRadius: 50.129,
-                  height: 76.196,
-                  width: 303,
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  display: 'block',
+                  maxWidth: 'none',
+                  width: '100%',
+                  height: '100%',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* ── Plant: Group39575 ── */}
+          <div
+            style={{
+              position: 'absolute',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              top: `${(45.7 * H) / 100}px`,
+              right: `${(0.78 * W) / 100}px`,
+              bottom: `${(40 * H) / 100}px`,
+              left: `${(74.1 * W) / 100}px`,
+            }}
+          >
+            <div
+              style={{
+                transform: 'rotate(3.45deg)',
+                flexShrink: 0,
+              }}
+            >
+              <img
+                src={imgGroup39575}
+                alt=""
+                style={{
+                  display: 'block',
+                  maxWidth: 'none',
+                  width: '100%',
+                  height: '100%',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* ── Plant: Group39576 ── */}
+          <div
+            style={{
+              position: 'absolute',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              top: `${(46.82 * H) / 100}px`,
+              right: `${(2.38 * W) / 100}px`,
+              bottom: `${(40 * H) / 100}px`,
+              left: `${(72.5 * W) / 100}px`,
+            }}
+          >
+            <div
+              style={{
+                transform: 'scaleX(-1) rotate(-3.45deg)',
+                flexShrink: 0,
+              }}
+            >
+              <img
+                src={imgGroup39576}
+                alt=""
+                style={{
+                  display: 'block',
+                  maxWidth: 'none',
+                  width: '100%',
+                  height: '100%',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* ── Plant: Group39577 ── */}
+          <div
+            style={{
+              position: 'absolute',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              top: `${(45.42 * H) / 100}px`,
+              right: `${(-1.26 * W) / 100}px`,
+              bottom: `${(40 * H) / 100}px`,
+              left: `${(75.14 * W) / 100}px`,
+            }}
+          >
+            <div
+              style={{
+                transform: 'scaleX(-1) rotate(6.49deg)',
+                flexShrink: 0,
+              }}
+            >
+              <img
+                src={imgGroup39577}
+                alt=""
+                style={{
+                  display: 'block',
+                  maxWidth: 'none',
+                  width: '100%',
+                  height: '100%',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* ── SIZE CHARTS dark banner ── */}
+          <div
+            style={{
+              position: 'absolute',
+              background: '#283618',
+              height: 118,
+              left: 74,
+              borderRadius: 20,
+              top: 1162,
+              width: 1288,
+            }}
+          />
+
+          <p
+            style={{
+              position: 'absolute',
+              fontFamily: '"BBH Hegarty", sans-serif',
+              fontWeight: 400,
+              fontSize: 48,
+              lineHeight: 'normal',
+              color: '#fff',
+              height: 48,
+              left: 'calc(50% - 189px)',
+              top: 1194,
+              width: 377,
+              margin: 0,
+            }}
+          >
+            SIZE CHARTS
+          </p>
+
+          {/* ── SIZE CHARTS green body ── */}
+          <div
+            style={{
+              position: 'absolute',
+              background: '#606c38',
+              height: 402,
+              left: 74,
+              borderRadius: 20,
+              top: 1297,
+              width: 1288,
+            }}
+          />
+
+          {/* ── Size items ── */}
+          {[
+            { label: 'XS', boxTop: 1328, textTop: 1331.14 },
+            { label: 'S', boxTop: 1376.67, textTop: 1380.59 },
+            { label: 'M', boxTop: 1426.12, textTop: 1429.26 },
+            { label: 'L', boxTop: 1474.78, textTop: 1477.92 },
+            { label: 'XL', boxTop: 1524.24, textTop: 1528.16 },
+            { label: '2XL', boxTop: 1572.9, textTop: 1576.04 },
+            { label: '3XL', boxTop: 1622.36, textTop: 1625.5 },
+          ].map(({ label, boxTop, textTop }) => (
+            <div key={label}>
+              <div
+                style={{
+                  position: 'absolute',
+                  background: '#45582d',
+                  height: 43.172,
+                  left: 110,
+                  top: boxTop,
+                  width: 85,
+                }}
+              />
+
+              <p
+                style={{
+                  position: 'absolute',
+                  fontFamily: '"BBH Hegarty", sans-serif',
+                  fontWeight: 400,
+                  fontSize: 28.258,
+                  lineHeight: 'normal',
+                  color: '#fff',
+                  top: textTop,
+                  left: 124,
+                  margin: 0,
+                  whiteSpace: 'nowrap',
                 }}
               >
-                <span
-                  style={{
-                    fontFamily: '"BBH Hegarty", sans-serif',
-                    fontWeight: 400,
-                    fontSize: 35.09,
-                    lineHeight: 'normal',
-                    color: '#fefae0',
-                    textShadow: '0px 2.005px 4.512px rgba(0,0,0,0.25)',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  BUY NOW!
-                </span>
-              </button>
+                {label}
+              </p>
             </div>
+          ))}
+
+          {/* ── BUY NOW button ── */}
+          <div
+            style={{
+              position: 'absolute',
+              left: 'calc(50% - 151.5px)',
+              top: 1765,
+            }}
+          >
+            <button
+              style={{
+                background: '#1c1f2a',
+                borderRadius: 50.129,
+                height: 76.196,
+                width: 303,
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: '"BBH Hegarty", sans-serif',
+                  fontWeight: 400,
+                  fontSize: 35.09,
+                  lineHeight: 'normal',
+                  color: '#fefae0',
+                  textShadow: '0px 2.005px 4.512px rgba(0,0,0,0.25)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                BUY NOW!
+              </span>
+            </button>
           </div>
         </div>
       </div>
+    </div>
   );
 }
