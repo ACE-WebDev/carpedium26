@@ -20,6 +20,207 @@ const imgLine13 = `${assetPathPrefix}/b9c88.svg`;
 const W = 1455;
 const H = 1950;
 
+const SIZES = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
+
+/* ── Phones: the same merch stacked in one column at a readable size ── */
+function MerchMobile() {
+  return (
+    <div
+      className="flex md:hidden"
+      style={{
+        width: '100%',
+        maxWidth: 480,
+        padding: '8px 20px 48px',
+        boxSizing: 'border-box',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 20,
+      }}
+    >
+      <h1
+        style={{
+          fontFamily: '"BBH Hegarty", sans-serif',
+          fontWeight: 400,
+          fontSize: 'clamp(44px, 14vw, 72px)',
+          lineHeight: 1,
+          color: '#283618',
+          textAlign: 'center',
+          margin: '16px 0 0',
+        }}
+      >
+        OUR MERCH
+      </h1>
+
+      <div
+        style={{
+          position: 'relative',
+          width: '100%',
+          borderRadius: 20,
+          background:
+            'linear-gradient(to bottom, rgba(239,212,163,0.25) 0%, #dfc298 94.231%)',
+          padding: '12px 12% 0',
+          boxSizing: 'border-box',
+        }}
+      >
+        <img
+          alt="Merch T-shirt"
+          src={imgBackside1}
+          style={{ display: 'block', width: '100%', height: 'auto' }}
+        />
+        <img
+          src={imgGroup39574}
+          alt=""
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            left: -6,
+            bottom: 0,
+            width: '24%',
+            height: 'auto',
+            transform: 'rotate(-19.06deg)',
+            pointerEvents: 'none',
+          }}
+        />
+        <img
+          src={imgGroup39576}
+          alt=""
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            right: -6,
+            bottom: 0,
+            width: '24%',
+            height: 'auto',
+            transform: 'scaleX(-1) rotate(-3.45deg)',
+            pointerEvents: 'none',
+          }}
+        />
+
+        {/* Price tag */}
+        <div
+          style={{
+            position: 'absolute',
+            right: '16%',
+            bottom: '12%',
+            width: 'clamp(64px, 18vw, 84px)',
+            aspectRatio: '1',
+            transform: 'rotate(-15deg)',
+          }}
+        >
+          <img
+            src={imgPriceTagGreen}
+            alt=""
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              inset: '10.77% 17.71% 14.58% 10.44%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <p
+              style={{
+                fontFamily: '"Bricolage Grotesque", sans-serif',
+                fontSize: 'clamp(16px, 4.6vw, 22px)',
+                color: '#000',
+                whiteSpace: 'nowrap',
+                margin: 0,
+                transform: 'rotate(48.1deg)',
+              }}
+            >
+              ₹300
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <p
+        style={{
+          fontFamily: '"Bricolage Grotesque", sans-serif',
+          fontSize: 'clamp(16px, 4.4vw, 20px)',
+          lineHeight: 1.35,
+          color: '#000',
+          textAlign: 'center',
+          margin: 0,
+        }}
+      >
+        Designed by 300dpi
+        <br />
+        Marketed by ks merchandise
+      </p>
+
+      <section style={{ width: '100%' }}>
+        <h2
+          style={{
+            fontFamily: '"BBH Hegarty", sans-serif',
+            fontWeight: 400,
+            fontSize: 'clamp(24px, 7vw, 32px)',
+            color: '#fff',
+            background: '#283618',
+            borderRadius: 16,
+            textAlign: 'center',
+            padding: '14px 12px',
+            margin: '0 0 10px',
+          }}
+        >
+          SIZE CHARTS
+        </h2>
+        <ul
+          style={{
+            listStyle: 'none',
+            margin: 0,
+            padding: 14,
+            background: '#606c38',
+            borderRadius: 16,
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 8,
+          }}
+        >
+          {SIZES.map((label) => (
+            <li
+              key={label}
+              style={{
+                fontFamily: '"BBH Hegarty", sans-serif',
+                fontSize: 18,
+                color: '#fff',
+                background: '#45582d',
+                minWidth: 56,
+                padding: '8px 10px',
+                textAlign: 'center',
+                boxSizing: 'border-box',
+              }}
+            >
+              {label}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <button
+        style={{
+          background: '#1c1f2a',
+          borderRadius: 50,
+          height: 56,
+          padding: '0 40px',
+          border: 'none',
+          cursor: 'pointer',
+          fontFamily: '"BBH Hegarty", sans-serif',
+          fontSize: 24,
+          color: '#fefae0',
+          textShadow: '0px 2px 4.5px rgba(0,0,0,0.25)',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        BUY NOW!
+      </button>
+    </div>
+  );
+}
+
 export default function Merch() {
   const [scale, setScale] = useState(1);
   const [isShirtHovered, setIsShirtHovered] = useState(false);
@@ -51,11 +252,14 @@ export default function Merch() {
         alignItems: 'center',
       }}
     >
-      {/* ── Responsive Scaled Canvas Container ── */}
+      <MerchMobile />
+
+      {/* ── Responsive Scaled Canvas Container ── (tablets and up: on a phone
+          the whole canvas shrinks to a quarter, too small to read or tap) */}
       <div
+        className="hidden md:flex"
         style={{
           width: '100%',
-          display: 'flex',
           justifyContent: 'center',
           overflow: 'hidden',
           height: Math.round(H * scale),

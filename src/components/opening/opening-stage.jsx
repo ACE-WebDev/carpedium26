@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { peekPendingJump } from "@/lib/homeJump";
 
 /*
  * The opening: a cover over the site with the CARPEDIEM wordmark cut out of
@@ -50,6 +51,12 @@ const FADE_FROM = 0.93;
 // Once through, the page stays held this much longer (ms), so trackpad
 // momentum does not carry it straight on past the hero.
 const SETTLE_MS = 500;
+// Until the scrolling starts the wordmark hops gently, like a ball: how
+// high, as a share of its own height, and how long each hop takes (ms).
+// Once it starts, the hops die away over about BOUNCE_SETTLE_MS * 4.
+const BOUNCE_HEIGHT = 0.06;
+const BOUNCE_MS = 850;
+const BOUNCE_SETTLE_MS = 120;
 // ---------------------------------------------------------------------
 
 const KEY_STEPS = {
@@ -69,12 +76,21 @@ export default function OpeningStage({ logoPath, text, children }) {
   const stageRef = useRef(null);
   const svgRef = useRef(null);
   const coverRef = useRef(null);
+  // A navbar link into the site skips the opening altogether: it lands on
+  // its section as though everything before it had played. Only in-app
+  // navigation does (src/lib/homeJump.js); the server always renders the
+  // cover, so a fresh visit still plays it.
+  const [skipped] = useState(() => peekPendingJump() !== null);
   // Once through, `opening-done` goes on <body> for anything waiting on the
   // opening (the hero's ball), and the cover is removed for good a moment
   // later.
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState(skipped);
 
   useEffect(() => {
+    if (skipped) {
+      document.body.classList.add("opening-done");
+      return;
+    }
     const stage = stageRef.current;
     const svg = svgRef.current;
     const cover = coverRef.current;
@@ -120,6 +136,7 @@ export default function OpeningStage({ logoPath, text, children }) {
 
     let shown = 0; // how far through, 0–1, as drawn
     let target = 0; // …and as scrolled to
+    let lift = 0; // how far the wordmark is up in its hop, svg units
 
     const render = () => {
       const { slideX, slideY, maxScale } = geometry;
@@ -130,7 +147,7 @@ export default function OpeningStage({ logoPath, text, children }) {
       const scale = maxScale ** shown;
       cover.setAttribute(
         "transform",
-        `translate(${x + slideX * slide} ${y + slideY * slide}) scale(${scale}) translate(${-x} ${-y})`,
+        `translate(${x + slideX * slide} ${y + slideY * slide - lift}) scale(${scale}) translate(${-x} ${-y})`,
       );
       stage.style.setProperty(
         "--text-fade",
@@ -145,6 +162,28 @@ export default function OpeningStage({ logoPath, text, children }) {
     let lastTime = 0;
     let finished = false;
     let settleTimer = 0;
+
+    // The idle hop: a parabola, as a ball thrown up falls back, so it lands
+    // sharply and hangs at the top. Played at full height until the first
+    // scroll, then fading out as the fly-through gets going.
+    let hopFrame = 0;
+    let hopStart = 0;
+    let hopLast = 0;
+    let hopGain = 1;
+    const hop = (now) => {
+      hopFrame = 0;
+      if (!hopStart) hopStart = now;
+      if (target > 0) {
+        const dt = hopLast ? Math.min(now - hopLast, 50) : 16;
+        hopGain *= Math.exp(-dt / BOUNCE_SETTLE_MS);
+        if (hopGain < 0.01) hopGain = 0;
+      }
+      hopLast = now;
+      const t = ((now - hopStart) % BOUNCE_MS) / BOUNCE_MS;
+      lift = LOGO_BOX[3] * BOUNCE_HEIGHT * hopGain * 4 * t * (1 - t);
+      render();
+      if (hopGain > 0 && !finished) hopFrame = requestAnimationFrame(hop);
+    };
 
     // Glides `shown` towards `target`, so a notched wheel still zooms
     // smoothly rather than in jumps.
@@ -231,6 +270,7 @@ export default function OpeningStage({ logoPath, text, children }) {
 
     measure();
     render();
+    hopFrame = requestAnimationFrame(hop);
     window.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("touchstart", onTouchStart, { passive: true });
     window.addEventListener("touchmove", onTouchMove, { passive: false });
@@ -241,10 +281,11 @@ export default function OpeningStage({ logoPath, text, children }) {
 
     return () => {
       if (frame) cancelAnimationFrame(frame);
+      if (hopFrame) cancelAnimationFrame(hopFrame);
       clearTimeout(settleTimer);
       detach();
     };
-  }, []);
+  }, [skipped]);
 
   return (
     <>

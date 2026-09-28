@@ -114,6 +114,17 @@ const styles = `
     opacity: 1;
   }
 
+  /* ── Touch screens have no hover: keep the details showing ────────────── */
+  @media (hover: none) {
+    .ec-overlay {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    .ec-card:hover {
+      transform: none;
+    }
+  }
+
   /* ── Text inside overlay ─────────────────────────────────────────────── */
   .ec-name {
     font-family: 'Georgia', serif;

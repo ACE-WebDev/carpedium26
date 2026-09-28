@@ -10,15 +10,18 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="relative w-full bg-[#EDD4A3] px-8 md:px-20 py-16 flex flex-col justify-between">
+    <footer
+      id="contact"
+      className="relative w-full bg-[#EDD4A3] px-6 md:px-20 py-12 md:py-16 flex flex-col justify-between scroll-mt-16"
+    >
       <div>
-        {/* Contact us: DELIRIUM NVC, Weight 400, Size 71.19px */}
-        <h2 
-          className="uppercase mb-8 text-[#283618]"
+        {/* Contact us: DELIRIUM NVC, Weight 400, 71.19px on desktop */}
+        <h2
+          className="uppercase mb-6 md:mb-8 text-[#283618]"
           style={{
             fontFamily: "'DELIRIUM NCV', sans-serif",
             fontWeight: 400,
-            fontSize: "71.19px",
+            fontSize: "clamp(44px, 11vw, 71.19px)",
             lineHeight: "100%",
             letterSpacing: "0%",
           }}
@@ -26,13 +29,13 @@ export default function Footer() {
           Contact us
         </h2>
 
-        {/* Core Committee: Product Sans Medium, Weight 500, Size 29.24px, Color #283618 */}
-        <h3 
+        {/* Core Committee: Product Sans Medium, Weight 500, 29.24px on desktop, Color #283618 */}
+        <h3
           className="mb-6 text-[#283618]"
           style={{
             fontFamily: "'Google Sans Flex', sans-serif",
             fontWeight: 500,
-            fontSize: "29.24px",
+            fontSize: "clamp(22px, 5.5vw, 29.24px)",
             lineHeight: "100%",
             letterSpacing: "0%",
           }}
@@ -40,36 +43,39 @@ export default function Footer() {
           Core Committee
         </h3>
 
-        {/* 4-Column Grid layout for contacts */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-y-12 gap-x-16 mb-24">
+        {/* Contacts: one column on the narrowest phones, up to four on wide
+            screens, with the text sized to fit the column it is in. */}
+        <div className="grid grid-cols-1 min-[375px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-y-8 md:gap-y-12 gap-x-4 md:gap-x-16 mb-16 md:mb-24">
           {committeeMembers.map((member, index) => (
             <div key={index} className="flex flex-col gap-2">
-              {/* Sudarsan P: Product Sans Medium, Weight 500, Size 27.97px, Color #602D00 */}
-              <span 
+              {/* Sudarsan P: Product Sans Medium, Weight 500, 27.97px on desktop, Color #602D00 */}
+              <span
                 style={{
                   fontFamily: "'Google Sans Flex', sans-serif",
                   fontWeight: 500,
-                  fontSize: "27.97px",
-                  lineHeight: "100%",
+                  fontSize: "clamp(18px, 1.95vw, 27.97px)",
+                  lineHeight: "110%",
                   letterSpacing: "0%",
                   color: "#602D00",
                 }}
               >
                 {member.name}
               </span>
-              {/* Phone number: Product Sans Medium, Weight 500, Size 25.42px, Color #602D00 */}
-              <span 
+              {/* Phone number: Product Sans Medium, Weight 500, 25.42px on desktop, Color #602D00 */}
+              <a
+                href={`tel:${member.phone.replace(/\s+/g, "")}`}
+                className="whitespace-nowrap"
                 style={{
                   fontFamily: "'Google Sans Flex', sans-serif",
                   fontWeight: 500,
-                  fontSize: "25.42px",
+                  fontSize: "clamp(16px, 1.75vw, 25.42px)",
                   lineHeight: "100%",
                   letterSpacing: "0%",
                   color: "#602D00",
                 }}
               >
                 {member.phone}
-              </span>
+              </a>
             </div>
           ))}
         </div>
@@ -78,13 +84,13 @@ export default function Footer() {
       {/* Bottom Footer Row: Credits & Social Icons */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-t border-[#2B3A1A]/10 pt-8">
         
-        {/* Made with love credit: Bricolage Grotesque, Weight 600 (SemiBold), Size 32px, Color #FFFBE0 */}
-        <p 
-          className="flex items-center gap-2"
+        {/* Made with love credit: Bricolage Grotesque, Weight 600 (SemiBold), 32px on desktop, Color #FFFBE0 */}
+        <p
+          className="flex flex-wrap items-center gap-x-2 gap-y-1"
           style={{
             fontFamily: "'Bricolage Grotesque', sans-serif",
             fontWeight: 600,
-            fontSize: "32px",
+            fontSize: "clamp(20px, 5vw, 32px)",
             lineHeight: "100%",
             letterSpacing: "0%",
             color: "#FFFBE0",
