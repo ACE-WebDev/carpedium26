@@ -192,6 +192,9 @@ const VARIANTS = {
   // measured rather than configured, so it follows the bars wherever the
   // layout puts them.
   end: {
+    // The three sponsor bars must leave together. Holding this separate
+    // scene would strand the two upper bars while the physics ball runs.
+    flowWithPage: true,
     walls: "/EndMaze.svg",
     simConfig: { ...config, route: config.end.route },
     launch({ root, rootBox, scale, offsetX, offsetY }) {
@@ -456,6 +459,7 @@ export default function BallFall({ variant }) {
       const holds =
         MODE === "scroll" &&
         !!pin &&
+        !setup.flowWithPage &&
         !reduced.matches &&
         config.scroll.screensPerSecond > 0;
       const sceneBox = pin ? pin.sticky.getBoundingClientRect() : rootBox;

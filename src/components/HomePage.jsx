@@ -381,6 +381,7 @@ const RUN_SCREENS = 1.2;
    the time the second lane is up at RUN_TO, still well in view. */
 const RUN_FROM = 0.75;
 const RUN_TO = 0.3;
+const SPACE_LANES = [358, 782];
 
 /* `enabled`: held at the start, out of sight, until then — so it cannot run
    while the Sponsors maze ball is still falling above it. Once over, it
@@ -591,6 +592,95 @@ function MazeRun({
         <image href="/ball.png" x={-geo.r} y={-geo.r} width={geo.r * 2} height={geo.r * 2} />
       </g>
     </svg>
+  );
+}
+
+/* The half bar is drawn with the two lanes so the three visible bars scroll
+   as a group. The copy in the physics scene stays hidden but measurable for
+   its ball collision geometry. */
+function PinnedHalfBar({ lanesRef, runRef, gapRef }) {
+  const copyRef = useRef(null);
+
+  useEffect(() => {
+    const pin = pinOf(lanesRef.current);
+    const realBar = runRef.current?.querySelector("[data-bar='a']");
+    const nextPin = runRef.current && pinOf(runRef.current);
+    const gapBox = gapRef.current;
+    const lanesImage = lanesRef.current?.querySelector("img[data-run]");
+    const copy = copyRef.current;
+    if (!pin || !nextPin || !realBar || !lanesImage || !gapBox || !copy) return;
+
+    const previousVisibility = realBar.style.visibility;
+    const previousPadding = gapBox.style.paddingTop;
+    let frame = 0;
+    let needsMeasure = true;
+    let gap = 0;
+    const update = () => {
+      frame = 0;
+      const scene = pin.sticky.getBoundingClientRect();
+
+      if (needsMeasure) {
+        const nextScene = nextPin.sticky.getBoundingClientRect();
+        const bar = realBar.getBoundingClientRect();
+        const image = lanesImage.getBoundingClientRect();
+        const imageScale = image.height / (lanesImage.naturalHeight || 1114);
+        const firstLane = image.top - scene.top + SPACE_LANES[0] * imageScale;
+        const secondLane = image.top - scene.top + SPACE_LANES[1] * imageScale;
+        const thirdWithoutGap = scene.height + bar.top - nextScene.top + bar.height / 2;
+        // Match the distance between the first two lane centres.
+        gap = Math.max(0, 2 * secondLane - firstLane - thirdWithoutGap);
+        if (Math.abs(gap - (parseFloat(gapBox.style.paddingTop) || 0)) > 0.5) {
+          gapBox.style.paddingTop = `${gap}px`;
+          window.dispatchEvent(new Event("ballrun:paced"));
+        }
+        copy.style.left = `${bar.left - scene.left}px`;
+        copy.style.top = `${scene.height + gap + bar.top - nextScene.top}px`;
+        copy.style.width = `${bar.width}px`;
+        copy.style.height = `${bar.height}px`;
+        needsMeasure = false;
+      }
+      copy.style.visibility = "visible";
+      realBar.style.visibility = "hidden";
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    const remeasure = () => {
+      needsMeasure = true;
+      schedule();
+    };
+    const observer = new ResizeObserver(remeasure);
+    observer.observe(pin.sticky);
+    observer.observe(pin.spacer);
+    observer.observe(nextPin.sticky);
+    observer.observe(realBar);
+    observer.observe(lanesImage);
+    lanesImage.addEventListener("load", remeasure);
+    schedule();
+    window.addEventListener("resize", remeasure);
+    window.addEventListener("ballrun:paced", remeasure);
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      observer.disconnect();
+      lanesImage.removeEventListener("load", remeasure);
+      window.removeEventListener("resize", remeasure);
+      window.removeEventListener("ballrun:paced", remeasure);
+      realBar.style.visibility = previousVisibility;
+      gapBox.style.paddingTop = previousPadding;
+    };
+  }, [lanesRef, runRef, gapRef]);
+
+  return (
+    <Image
+      ref={copyRef}
+      src="/carpediem-maze-bottom.png"
+      alt=""
+      width={1000}
+      height={200}
+      aria-hidden="true"
+      className="pointer-events-none absolute z-20 max-w-none object-cover object-left"
+      style={{ visibility: "hidden" }}
+    />
   );
 }
 
@@ -818,8 +908,8 @@ function BarDrop({
 export default function HomePage() {
   // The middles of the two gaps between the bars in sponsorsection.png the
   // ball runs along (rows 301–416 and 730–835), in its own px.
-  const SPACE_LANES = [358, 782];
   const spaceRef = useRef(null);
+  const gapRef = useRef(null);
   const ballTargetRef = useRef(null);
   const dropRef = useRef(null);
   // A navbar link that brought us here, if one did (src/lib/homeJump.js).
@@ -1176,7 +1266,7 @@ export default function HomePage() {
       >
         {/* The heading and the lanes, held on screen while the lanes' ball
             runs (MazeRun). On a phone the lanes are drawn bigger. */}
-        <BallPin>
+        <BallPin className="z-20">
         <h2
           id="sponsors"
           className="relative z-20 w-full scroll-mt-24 text-center uppercase leading-none font-normal font-['BBH_Hegarty'] text-[#1C1F2A] text-[10vw] md:text-[clamp(6rem,2.9vw,56px)]"
@@ -1208,11 +1298,12 @@ export default function HomePage() {
             debug={false}
           />
         </div>
+        <PinnedHalfBar lanesRef={spaceRef} runRef={dropRef} gapRef={gapRef} />
         </BallPin>
 
-        {/* The last run, held on screen while its ball falls once the lanes'
-            ball has gone. Above the lanes, which its first bar overlaps. On
-            a phone it is drawn bigger, and room is made below for that. */}
+        {/* The last run starts one lane interval below the second sponsor
+            lane and flows with the three visible bars. */}
+        <div ref={gapRef} className="flow-root">
         <BallPin className="z-10 max-sm:pb-[28%]">
         <div ref={dropRef} className="relative z-10 w-full origin-top max-sm:scale-[1.3]">
           <Image
@@ -1221,7 +1312,7 @@ export default function HomePage() {
             alt=""
             width={1000}
             height={200}
-            className="relative z-10 block w-[54%] aspect-[500/50] -mt-[14%] object-cover object-left pointer-events-none select-none"
+            className="relative z-10 block w-[54%] aspect-[500/65] -mt-[14%] object-cover object-left pointer-events-none select-none"
           />
 
         {/* The ball's last run rolls along the top of this bar, between it
@@ -1232,7 +1323,7 @@ export default function HomePage() {
           width={1000}
           height={200}
           data-ball-floor=""
-          className="relative z-10 block w-[54%] aspect-[500/50] object-cover object-left mt-[5%] pointer-events-none select-none"
+          className="relative z-10 block w-[54%] aspect-[500/65] object-cover object-left mt-[5%] pointer-events-none select-none"
         />
 
         {/* The ball's last run: along the bars above, down through this
@@ -1273,6 +1364,7 @@ export default function HomePage() {
         <BarDrop boxRef={dropRef} afterRef={spaceRef} target={{ x: 0.9, y: 0.1 }} />
       </div>
         </BallPin>
+        </div>
       </div>
     </div>
   );
