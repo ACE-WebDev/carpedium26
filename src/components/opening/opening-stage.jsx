@@ -57,6 +57,7 @@ const SETTLE_MS = 500;
 const BOUNCE_HEIGHT = 0.06;
 const BOUNCE_MS = 850;
 const BOUNCE_SETTLE_MS = 120;
+const LOGO_REVEAL_MS = 2000;
 // ---------------------------------------------------------------------
 
 const KEY_STEPS = {
@@ -85,6 +86,7 @@ export default function OpeningStage({ logoPath, text, children }) {
   // opening (the hero's ball), and the cover is removed for good a moment
   // later.
   const [done, setDone] = useState(skipped);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (skipped) {
@@ -145,6 +147,7 @@ export default function OpeningStage({ logoPath, text, children }) {
       // Zooming by a constant factor per step of scrolling reads as moving
       // towards it at a steady speed.
       const scale = maxScale ** shown;
+      // Move the white fill with the cutout during the idle bounce and zoom.
       cover.setAttribute(
         "transform",
         `translate(${x + slideX * slide} ${y + slideY * slide - lift}) scale(${scale}) translate(${-x} ${-y})`,
@@ -162,6 +165,11 @@ export default function OpeningStage({ logoPath, text, children }) {
     let lastTime = 0;
     let finished = false;
     let settleTimer = 0;
+    let canScroll = false;
+    const revealTimer = window.setTimeout(() => {
+      canScroll = true;
+      setReady(true);
+    }, LOGO_REVEAL_MS);
 
     // The idle hop: a parabola, as a ball thrown up falls back, so it lands
     // sharply and hangs at the top. Played at full height until the first
@@ -200,8 +208,9 @@ export default function OpeningStage({ logoPath, text, children }) {
     };
 
     const advance = (px) => {
-      if (finished) return;
+      if (finished || !canScroll) return;
       target = clamp01(target + px / SCROLL_RANGE);
+      stage.style.setProperty("--prompt-opacity", "0");
       if (!frame) frame = requestAnimationFrame(tick);
     };
 
@@ -283,6 +292,7 @@ export default function OpeningStage({ logoPath, text, children }) {
       if (frame) cancelAnimationFrame(frame);
       if (hopFrame) cancelAnimationFrame(hopFrame);
       clearTimeout(settleTimer);
+      clearTimeout(revealTimer);
       detach();
     };
   }, [skipped]);
@@ -304,18 +314,24 @@ export default function OpeningStage({ logoPath, text, children }) {
             viewBox={LOGO_BOX.join(" ")}
             className="opening-logo absolute overflow-visible"
           >
-            <path
-              ref={coverRef}
-              className="opening-cover"
-              d={SHEET + logoPath}
-              vectorEffect="non-scaling-stroke"
-            />
+            <g ref={coverRef}>
+              <path
+                className="opening-cover"
+                d={SHEET + logoPath}
+                vectorEffect="non-scaling-stroke"
+              />
+              <path className="opening-white-logo" d={logoPath} />
+            </g>
           </svg>
           <div
             className="opening-text absolute inset-x-0 flex flex-col items-center"
             style={{ opacity: "var(--text-fade, 1)" }}
           >
             {text}
+          </div>
+          <div className={`opening-scroll-prompt ${ready ? "is-ready" : ""}`}>
+            <span aria-hidden="true">↓</span>
+            <span>Scroll to enter</span>
           </div>
         </div>
       )}

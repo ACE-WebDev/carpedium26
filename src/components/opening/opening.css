@@ -52,6 +52,47 @@
   stroke-linejoin: round;
 }
 
+.opening-white-logo {
+  fill: #fff;
+  pointer-events: none;
+  animation: opening-logo-reveal 2s ease-in-out forwards;
+}
+
+@keyframes opening-logo-reveal {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.opening-scroll-prompt {
+  position: absolute;
+  bottom: max(2rem, env(safe-area-inset-bottom));
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  color: #283618;
+  font-family: "BBH Hegarty", sans-serif;
+  font-size: clamp(0.9rem, 1.4vw, 1.25rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(-50%);
+  transition: opacity 350ms ease;
+  pointer-events: none;
+}
+
+.opening-scroll-prompt.is-ready {
+  opacity: var(--prompt-opacity, 1);
+}
+
+.opening-scroll-prompt span:first-child {
+  font-family: Arial, sans-serif;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
 .opening-text {
   top: calc(var(--logo-top) + var(--logo-h) + var(--text-gap));
 }

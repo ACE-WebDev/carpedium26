@@ -128,7 +128,7 @@ const ballAnimation = {
     // How long every scroll-driven ball takes to glide to where the
     // scrollbar says it should be, in ms, so wheel notches and flicks slide
     // it there rather than making it jump. 0 = locked to the scrollbar.
-    glideMs: 120,
+    glideMs: 75,
     // Space kept between the navbar's lowest point and the top of the ball,
     // in screen px, so it is never hidden behind the navbar.
     navbarMargin: 24,

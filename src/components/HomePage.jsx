@@ -1221,7 +1221,7 @@ export default function HomePage() {
             alt=""
             width={1000}
             height={200}
-            className="relative z-10 block w-[46%] aspect-[500/50] -mt-[10%] object-cover object-left pointer-events-none select-none"
+            className="relative z-10 block w-[54%] aspect-[500/50] -mt-[14%] object-cover object-left pointer-events-none select-none"
           />
 
         {/* The ball's last run rolls along the top of this bar, between it
@@ -1232,11 +1232,11 @@ export default function HomePage() {
           width={1000}
           height={200}
           data-ball-floor=""
-          className="relative z-10 block w-[46%] aspect-[500/50] object-cover object-left mt-[5%] pointer-events-none select-none"
+          className="relative z-10 block w-[54%] aspect-[500/50] object-cover object-left mt-[5%] pointer-events-none select-none"
         />
 
         {/* The ball's last run: along the bars above, down through this
-            maze and onto the logo under it, which lights up as it lands. */}
+            maze and into the logo below it. */}
         <div className="relative -mt-[16.4%]">
           <div className="relative w-full aspect-[1440/1000] overflow-hidden">
             <Image
