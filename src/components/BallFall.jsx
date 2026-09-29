@@ -119,6 +119,7 @@ const VARIANTS = {
   // blackout takes over.
   hero: {
     start: START,
+    portal: true,
     // HERO_VIEW drawn to fill its box, centred across it and from its top
     // (MazeBall: `xMidYMin slice`) — on a phone the box is narrower than
     // the view, and its sides are cut off.
@@ -161,6 +162,7 @@ const VARIANTS = {
   // section.
   sponsors: {
     start: START,
+    portal: true,
     mazeTransform(maze, rootBox) {
       const box = maze.getBoundingClientRect(); // includes its scale-[1.18]
       const k = box.width / SPONSORS_WIDTH;
@@ -332,6 +334,23 @@ function findTouch(timeline, { scale, offsetX, offsetY, size }, box, art) {
   return last;
 }
 
+/* The ring's outer edge is artwork, but its black center is the portal.
+   Let the ball travel into that center before starting the page wipe. */
+function findPortalEntry(timeline, { scale, offsetX, offsetY }, box) {
+  const cx = box.left + box.width / 2;
+  const cy = box.top + box.height / 2;
+  const radius = Math.min(box.width, box.height) * 0.09;
+  for (let i = 1; i < timeline.count; i++) {
+    const p = sampleTimeline(timeline, i);
+    const x = p.x * scale + offsetX;
+    const y = p.y * scale + offsetY;
+    if (y >= cy - radius / 3 && Math.hypot(x - cx, y - cy) <= radius) {
+      return i;
+    }
+  }
+  return timeline.count - 1;
+}
+
 export default function BallFall({ variant }) {
   const svgRef = useRef(null);
   const shrinkRef = useRef(null);
@@ -408,25 +427,23 @@ export default function BallFall({ variant }) {
 
       // Where in the fall it first touches the landing art. Read the art's
       // pixels once per image it loads.
-      const artImage = target && (setup.artOf ? setup.artOf(target) : target);
+      const artImage = target && !setup.portal && (setup.artOf ? setup.artOf(target) : target);
       const artImageSrc = artImage && (artImage.currentSrc || artImage.src);
       if (artImage && artImageSrc !== artSrc) {
         art = readAlpha(artImage);
         if (art) artSrc = artImageSrc;
         else artImage.addEventListener("load", relayout, { once: true });
       }
-      const touchIndex = targetBox
-        ? findTouch(
-            timeline,
-            { scale, offsetX, offsetY, size },
-            {
-              left: targetBox.left - rootBox.left,
-              top: targetBox.top - rootBox.top,
-              width: targetBox.width,
-              height: targetBox.height,
-            },
-            art
-          )
+      const targetRect = targetBox && {
+        left: targetBox.left - rootBox.left,
+        top: targetBox.top - rootBox.top,
+        width: targetBox.width,
+        height: targetBox.height,
+      };
+      const touchIndex = targetRect
+        ? setup.portal
+          ? findPortalEntry(timeline, { scale, offsetX, offsetY }, targetRect)
+          : findTouch(timeline, { scale, offsetX, offsetY, size }, targetRect, art)
         : timeline.count - 1;
 
       // Scroll pacing. `top0` is where the root's top is on screen when the
@@ -594,13 +611,10 @@ export default function BallFall({ variant }) {
       () => (geometry && arrivedAt === null ? scrollProgress() : null),
       (progress) => {
         const index = indexAt(geometry.warp, progress);
-        // It lands at the end of its fall — or as soon as the page has been
-        // scrolled past that, without waiting for the glide to catch up, as
-        // by then where it lands is on its way off the screen.
-        if (
-          setup.announce &&
-          (index >= geometry.touchIndex || scrollProgress() >= 1)
-        ) {
+        // Start the wipe only after the ball itself reaches the landing art.
+        // A trackpad can put the page at the end of its range while the
+        // gliding ball is still visibly falling toward it.
+        if (setup.announce && index >= geometry.touchIndex) {
           arrive();
         }
         // Otherwise it rests on the art, and scrolling back up rewinds it.
