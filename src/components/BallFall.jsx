@@ -172,7 +172,14 @@ const VARIANTS = {
         offsetY: box.top - rootBox.top + SPONSORS_OFFSET[1] * k,
       };
     },
-    scrollRange: (args) => scrollRangeBelow({ ...args, lines: SPONSORS_LINES }),
+    // Only the maze needs to fit below the navbar. The flagship section
+    // shares its pin so the wave stays attached, but can sit above view.
+    scrollRange: (args) => scrollRangeBelow({
+      ...args,
+      sceneHeight: args.rootBox.height,
+      sceneOffset: 0,
+      lines: SPONSORS_LINES,
+    }),
     // Kept up to a fifth of the screen further below the navbar than it
     // must be, held for at least 60% of its fall, and steered steadily down
     // the screen (see layout).
@@ -192,6 +199,9 @@ const VARIANTS = {
   // measured rather than configured, so it follows the bars wherever the
   // layout puts them.
   end: {
+    // The lane animation owns the shared pin. The exit maze moves with
+    // that group and must never establish a separate hold or release it.
+    flowWithPage: true,
     walls: "/EndMaze.svg",
     simConfig: { ...config, route: config.end.route },
     launch({ root, rootBox, scale, offsetX, offsetY }) {
@@ -456,10 +466,16 @@ export default function BallFall({ variant }) {
       const holds =
         MODE === "scroll" &&
         !!pin &&
+        !setup.flowWithPage &&
         !reduced.matches &&
         config.scroll.screensPerSecond > 0;
       const sceneBox = pin ? pin.sticky.getBoundingClientRect() : rootBox;
       const sceneOffset = rootBox.top - sceneBox.top;
+      // The exit's natural scroll position includes the preceding lane
+      // hold. Account for that spacer without changing the shared pin.
+      const precedingHold = setup.flowWithPage && pin
+        ? parseFloat(pin.spacer.style.height) || 0
+        : 0;
       const startY = start.y * scale + offsetY;
       // How far the page must be scrolled before this fall may begin: far
       // enough for what plays before it (`after`) to be over, and a little
@@ -479,7 +495,7 @@ export default function BallFall({ variant }) {
         sceneHeight: sceneBox.height,
         sceneOffset,
         earliestTop:
-          (pin ? pageTop(pin.track) + sceneOffset : pageTop(root)) -
+          (pin ? pageTop(pin.track) + sceneOffset + precedingHold : pageTop(root)) -
           notBefore,
       });
       // Held for however much longer the configured pace wants than the
@@ -525,7 +541,9 @@ export default function BallFall({ variant }) {
       // The hold begins `holdAt` px into the fall, where the scene has been
       // scrolled that much further up (a negative `top` sticks it partly
       // above the screen, for a scene taller than it).
-      if (pin) setPin(pin, range.top0 - sceneOffset - holdAt, hold);
+      if (pin && !setup.flowWithPage) {
+        setPin(pin, range.top0 - sceneOffset - holdAt, hold);
+      }
 
       geometry = {
         scale,
@@ -538,7 +556,7 @@ export default function BallFall({ variant }) {
         touchIndex,
         top0: range.top0,
         span,
-        sceneOffset,
+        sceneOffset: sceneOffset + precedingHold,
         startY,
         notBefore,
       };

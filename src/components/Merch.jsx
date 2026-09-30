@@ -4,8 +4,6 @@ const assetPathPrefix = '/merch';
 
 const imgBackside1 = `${assetPathPrefix}/front.png`;
 const imgBackside2 = `${assetPathPrefix}/back.png`;
-const imgRectangle94 = `${assetPathPrefix}/101a5.png`;
-const imgHeaderCircle = `${assetPathPrefix}/46e3a.svg`;
 const imgGroup112 = `${assetPathPrefix}/96c34.svg`;
 const imgGroup39574 = `${assetPathPrefix}/a1b56.svg`;
 const imgGroup39575 = `${assetPathPrefix}/cb141.svg`;
@@ -21,10 +19,52 @@ const W = 1455;
 const H = 1950;
 const CANVAS_H = 1340;
 
-const SIZES = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
+function ShirtPreview({ isFlipped, onFlip }) {
+  const faceStyle = {
+    position: 'absolute',
+    inset: 0,
+    width: '100%',
+    height: '100%',
+    objectFit: 'contain',
+    backfaceVisibility: 'hidden',
+    WebkitBackfaceVisibility: 'hidden',
+    pointerEvents: 'none',
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onFlip}
+      aria-label={isFlipped ? 'Flip T-shirt to front' : 'Flip T-shirt to back'}
+      className="block h-full w-full cursor-pointer border-0 bg-transparent p-0"
+      style={{ perspective: 1500 }}
+    >
+      <span
+        className="relative block h-full w-full transition-transform duration-600 ease-in-out motion-reduce:transition-none"
+        style={{
+          transformStyle: 'preserve-3d',
+          transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+        }}
+      >
+        <img
+          alt="Front of the Carpe Diem T-shirt"
+          aria-hidden={isFlipped}
+          src={imgBackside1}
+          style={faceStyle}
+        />
+        <img
+          alt="Back of the Carpe Diem T-shirt"
+          aria-hidden={!isFlipped}
+          src={imgBackside2}
+          style={{ ...faceStyle, transform: 'rotateY(180deg)' }}
+        />
+      </span>
+    </button>
+  );
+}
 
 /* ── Phones: the same merch stacked in one column at a readable size ── */
-function MerchMobile() {
+function MerchMobile({ isFlipped, onFlip }) {
   return (
     <div
       className="flex md:hidden"
@@ -62,11 +102,9 @@ function MerchMobile() {
           boxSizing: 'border-box',
         }}
       >
-        <img
-          alt="Merch T-shirt"
-          src={imgBackside1}
-          style={{ display: 'block', width: '100%', height: 'auto' }}
-        />
+        <div style={{ width: '100%', aspectRatio: '2386 / 2617' }}>
+          <ShirtPreview isFlipped={isFlipped} onFlip={onFlip} />
+        </div>
         <img
           src={imgGroup39574}
           alt=""
@@ -105,6 +143,7 @@ function MerchMobile() {
             width: 'clamp(64px, 18vw, 84px)',
             aspectRatio: '1',
             transform: 'rotate(-15deg)',
+            pointerEvents: 'none',
           }}
         >
           <img
@@ -137,6 +176,26 @@ function MerchMobile() {
         </div>
       </div>
 
+      <button
+        type="button"
+        onClick={onFlip}
+        aria-label={isFlipped ? 'Show front of T-shirt' : 'Show back of T-shirt'}
+        style={{
+          minWidth: 220,
+          minHeight: 52,
+          padding: '12px 24px',
+          background: '#fefae0',
+          borderRadius: 50,
+          border: 'none',
+          cursor: 'pointer',
+          fontFamily: '"BBH Hegarty", sans-serif',
+          fontSize: 22,
+          color: '#1c1f2a',
+        }}
+      >
+        {isFlipped ? 'VIEW FRONT' : 'VIEW BACK'}
+      </button>
+
       <p
         style={{
           fontFamily: '"Bricolage Grotesque", sans-serif',
@@ -152,82 +211,17 @@ function MerchMobile() {
         Marketed by ks merchandise
       </p>
 
-      <section style={{ width: '100%' }}>
-        <h2
-          style={{
-            fontFamily: '"BBH Hegarty", sans-serif',
-            fontWeight: 400,
-            fontSize: 'clamp(24px, 7vw, 32px)',
-            color: '#fff',
-            background: '#283618',
-            borderRadius: 16,
-            textAlign: 'center',
-            padding: '14px 12px',
-            margin: '0 0 10px',
-          }}
-        >
-          SIZE CHARTS
-        </h2>
-        <ul
-          style={{
-            listStyle: 'none',
-            margin: 0,
-            padding: 14,
-            background: '#606c38',
-            borderRadius: 16,
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 8,
-          }}
-        >
-          {SIZES.map(label => (
-            <li
-              key={label}
-              style={{
-                fontFamily: '"BBH Hegarty", sans-serif',
-                fontSize: 18,
-                color: '#fff',
-                background: '#45582d',
-                minWidth: 56,
-                padding: '8px 10px',
-                textAlign: 'center',
-                boxSizing: 'border-box',
-              }}
-            >
-              {label}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <button
-        style={{
-          background: '#1c1f2a',
-          borderRadius: 50,
-          height: 56,
-          padding: '0 40px',
-          border: 'none',
-          cursor: 'pointer',
-          fontFamily: '"BBH Hegarty", sans-serif',
-          fontSize: 24,
-          color: '#fefae0',
-          textShadow: '0px 2px 4.5px rgba(0,0,0,0.25)',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        BUY NOW!
-      </button>
     </div>
   );
 }
 
 export default function Merch() {
   const [scale, setScale] = useState(1);
-  const [isShirtHovered, setIsShirtHovered] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
 
   useEffect(() => {
     const updateScale = () => {
-      const screenWidth = window.innerWidth;
+      const screenWidth = document.documentElement.clientWidth;
       if (screenWidth < W) {
         setScale(screenWidth / W);
       } else {
@@ -252,7 +246,7 @@ export default function Merch() {
         alignItems: 'center',
       }}
     >
-      <MerchMobile />
+      <MerchMobile isFlipped={isFlipped} onFlip={() => setIsFlipped(f => !f)} />
 
       {/* ── Responsive Scaled Canvas Container ── (tablets and up: on a phone
           the whole canvas shrinks to a quarter, too small to read or tap) */}
@@ -262,7 +256,7 @@ export default function Merch() {
           width: '100%',
           justifyContent: 'center',
           overflow: 'hidden',
-          height: Math.round(CANVAS_H * scale), // was H * scale
+          height: Math.round(CANVAS_H * scale),
           position: 'relative',
         }}
       >
@@ -310,8 +304,6 @@ export default function Merch() {
           </h1>
 
           <div
-            onMouseEnter={() => setIsShirtHovered(true)}
-            onMouseLeave={() => setIsShirtHovered(false)}
             style={{
               position: 'absolute',
               width: 605,
@@ -321,54 +313,21 @@ export default function Merch() {
               perspective: 1500,
             }}
           >
-            <div
-              style={{
-                position: 'relative',
-                width: '100%',
-                height: '100%',
-                transformStyle: 'preserve-3d',
-                transition: 'transform 0.6s ease',
-                transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-              }}
-            >
-              <img
-                alt="Front"
-                src={imgBackside1}
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'contain',
-                  backfaceVisibility: 'hidden',
-                  pointerEvents: 'none',
-                }}
-              />
-              <img
-                alt="Back"
-                src={imgBackside2}
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'contain',
-                  backfaceVisibility: 'hidden',
-                  transform: 'rotateY(180deg)',
-                  pointerEvents: 'none',
-                }}
-              />
-            </div>
+            <ShirtPreview
+              isFlipped={isFlipped}
+              onFlip={() => setIsFlipped(f => !f)}
+            />
           </div>
 
           {/* ── Flip button ── */}
           <button
+            type="button"
             onClick={() => setIsFlipped(f => !f)}
             aria-label={isFlipped ? 'Show front of T-shirt' : 'Show back of T-shirt'}
             style={{
               position: 'absolute',
               left: 'calc(50% - 110px)',
-              top: 1190,
+              top: 1085,
               width: 220,
               height: 52,
               zIndex: 5,
@@ -836,291 +795,6 @@ export default function Merch() {
             </div>
           </div>
 
-          {/* ── SIZE CHARTS dark banner ── */}
-          <div
-            style={{
-              position: 'absolute',
-              background: '#283618',
-              height: 118,
-              left: 74,
-              borderRadius: 20,
-              top: 1162,
-              width: 1288,
-            }}
-          />
-
-          <p
-            style={{
-              position: 'absolute',
-              fontFamily: '"BBH Hegarty", sans-serif',
-              fontWeight: 400,
-              fontSize: 48,
-              lineHeight: 'normal',
-              color: '#fff',
-              height: 48,
-              left: 'calc(50% - 189px)',
-              top: 1194,
-              width: 377,
-              margin: 0,
-            }}
-          >
-            SIZE CHARTS
-          </p>
-
-          {/* ── SIZE CHARTS green body ── */}
-          <div
-            style={{
-              position: 'absolute',
-              background: '#606c38',
-              height: 402,
-              left: 74,
-              borderRadius: 20,
-              top: 1297,
-              width: 1288,
-            }}
-          />
-
-          {/* ── Size items ── */}
-          {[
-            { label: 'XS', boxTop: 1328, textTop: 1331.14 },
-            { label: 'S', boxTop: 1376.67, textTop: 1380.59 },
-            { label: 'M', boxTop: 1426.12, textTop: 1429.26 },
-            { label: 'L', boxTop: 1474.78, textTop: 1477.92 },
-            { label: 'XL', boxTop: 1524.24, textTop: 1528.16 },
-            { label: '2XL', boxTop: 1572.9, textTop: 1576.04 },
-            { label: '3XL', boxTop: 1622.36, textTop: 1625.5 },
-          ].map(({ label, boxTop, textTop }) => (
-            <div key={label}>
-              <div
-                style={{
-                  position: 'absolute',
-                  background: '#45582d',
-                  height: 43.172,
-                  left: 110,
-                  top: boxTop,
-                  width: 85,
-                }}
-              />
-
-              <p
-                style={{
-                  position: 'absolute',
-                  fontFamily: '"BBH Hegarty", sans-serif',
-                  fontWeight: 400,
-                  fontSize: 28.258,
-                  lineHeight: 'normal',
-                  color: '#fff',
-                  top: textTop,
-                  left: 124,
-                  margin: 0,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {label}
-              </p>
-            </div>
-          ))}
-
-          {/* ── BUY NOW button ── */}
-          <div
-            style={{
-              position: 'absolute',
-              left: 'calc(50% - 151.5px)',
-              top: 1765,
-            }}
-          >
-            <button
-              style={{
-                background: '#1c1f2a',
-                borderRadius: 50.129,
-                height: 76.196,
-                width: 303,
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: '"BBH Hegarty", sans-serif',
-                  fontWeight: 400,
-                  fontSize: 35.09,
-                  lineHeight: 'normal',
-                  color: '#fefae0',
-                  textShadow: '0px 2.005px 4.512px rgba(0,0,0,0.25)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                BUY NOW!
-              </span>
-            </button>
-          </div>
-
-          {/* ── Plant: Group112 ── */}
-          <div
-            style={{
-              position: 'absolute',
-              top: `${(44.07 * H) / 100}px`,
-              right: `${(73.42 * W) / 100}px`,
-              bottom: `${(40 * H) / 100}px`,
-              left: 0,
-            }}
-          >
-            <img
-              src={imgGroup112}
-              alt=""
-              style={{
-                position: 'absolute',
-                inset: 0,
-                maxWidth: 'none',
-                width: '100%',
-                height: '100%',
-              }}
-            />
-          </div>
-
-          {/* ── Plant: Group39574 ── */}
-          <div
-            style={{
-              position: 'absolute',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              top: `${(42.57 * H) / 100}px`,
-              right: `${(78.38 * W) / 100}px`,
-              bottom: `${(35 * H) / 100}px`,
-              left: `${(-11.11 * W) / 100}px`,
-            }}
-          >
-            <div
-              style={{
-                transform: 'rotate(-19.06deg)',
-                flexShrink: 0,
-              }}
-            >
-              <img
-                src={imgGroup39574}
-                alt=""
-                style={{
-                  display: 'block',
-                  maxWidth: 'none',
-                  width: '100%',
-                  height: '100%',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* ── Plant: Group39575 ── */}
-          <div
-            style={{
-              position: 'absolute',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              top: `${(45.7 * H) / 100}px`,
-              right: `${(0.78 * W) / 100}px`,
-              bottom: `${(40 * H) / 100}px`,
-              left: `${(74.1 * W) / 100}px`,
-            }}
-          >
-            <div
-              style={{
-                transform: 'rotate(3.45deg)',
-                flexShrink: 0,
-              }}
-            >
-              <img
-                src={imgGroup39575}
-                alt=""
-                style={{
-                  display: 'block',
-                  maxWidth: 'none',
-                  width: '100%',
-                  height: '100%',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* ── Plant: Group39576 ── */}
-          <div
-            style={{
-              position: 'absolute',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              top: `${(46.82 * H) / 100}px`,
-              right: `${(2.38 * W) / 100}px`,
-              bottom: `${(40 * H) / 100}px`,
-              left: `${(72.5 * W) / 100}px`,
-            }}
-          >
-            <div
-              style={{
-                transform: 'scaleX(-1) rotate(-3.45deg)',
-                flexShrink: 0,
-              }}
-            >
-              <img
-                src={imgGroup39576}
-                alt=""
-                style={{
-                  display: 'block',
-                  maxWidth: 'none',
-                  width: '100%',
-                  height: '100%',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* ── Plant: Group39577 ── */}
-          <div
-            style={{
-              position: 'absolute',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              top: `${(45.42 * H) / 100}px`,
-              right: `${(-1.26 * W) / 100}px`,
-              bottom: `${(40 * H) / 100}px`,
-              left: `${(75.14 * W) / 100}px`,
-            }}
-          >
-            <div
-              style={{
-                transform: 'scaleX(-1) rotate(6.49deg)',
-                flexShrink: 0,
-              }}
-            >
-              <img
-                src={imgGroup39577}
-                alt=""
-                style={{
-                  display: 'block',
-                  maxWidth: 'none',
-                  width: '100%',
-                  height: '100%',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* ── SIZE CHARTS dark banner ── */}
-          <div
-            style={{
-              position: 'absolute',
-              background: '#283618',
-              height: 118,
-              left: 74,
-              borderRadius: 20,
-              top: 1162,
-              width: 1288,
-            }}
-          />
         </div>
       </div>
     </div>

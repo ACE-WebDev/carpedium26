@@ -40,11 +40,11 @@ const ballAnimation = {
     // Pull downwards, in maze px/s². Higher falls faster — in "auto" mode
     // that is the speed you see; in "scroll" mode your scrolling sets the
     // pace, so it mostly changes how flat the bounces are.
-    gravity: 2200,
+    gravity: 1650,
     // How high it bounces: the fraction of its speed kept when it hits a
     // wall. 0 = lands dead, 0.3 = small hops, 0.6 = lively. Above ~0.6 it
     // bounces far enough to wander well off the route (still finishes).
-    bounciness: 0.3,
+    bounciness: 0.5,
     // Hits slower than this (maze px/s) don't bounce at all — the ball just
     // settles. Raise it to cut out small jittery hops, lower it for more.
     minBounceSpeed: 390,

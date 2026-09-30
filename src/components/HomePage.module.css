@@ -1,0 +1,16 @@
+.sponsorsMazeArt {
+  display: flow-root;
+  width: 100%;
+}
+
+@media (max-width: 639px) {
+  .sponsorsMazeArt {
+    /* The image and ring occupy 1.164 times their width. Keep the mobile
+       zoom within the viewport, with room for the navbar and wave. Using
+       layout width also gives the ball's pin the artwork's actual height. */
+    width: min(160vw, calc((100svh - 200px) / 1.164));
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
