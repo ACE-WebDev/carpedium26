@@ -144,6 +144,7 @@ function FlagshipStats() {
   return (
     <div
       ref={ref}
+      id="flagship-stats-countdown"
       className=" absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[88%] max-w-[1350px] flex items-center justify-around z-30"
     >
       {stats.map((s) => (
@@ -169,6 +170,103 @@ function FlagshipStats() {
           </span>
         </div>
       ))}
+    </div>
+  );
+}
+
+/* ================= FLAGSHIP GRASS & WAVE PLATFORM ================= */
+function FlagshipPlatform() {
+  const containerRef = useRef(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isInView, setIsInView] = useState(false);
+
+  useEffect(() => {
+    let ticking = false;
+
+    const checkView = () => {
+      ticking = false;
+      const statsEl = document.getElementById("flagship-stats-countdown");
+      if (!statsEl) return;
+
+      const rect = statsEl.getBoundingClientRect();
+      const vh = window.innerHeight;
+      const isMobile = window.innerWidth <= 768;
+
+      // Threshold:
+      // Mobile: 48% of screen height
+      // Desktop: 30% of screen height
+      const threshold = isMobile ? vh * 0.48 : vh * 0.30;
+
+      // When above countdown: false (leaves are UP)
+      // When at or below countdown: true (leaves are HIDDEN)
+      // On backward scroll, as soon as you scroll above threshold: false (leaves RISE smoothly)
+      const isPastCountdown = rect.top < threshold;
+      setIsInView(isPastCountdown);
+    };
+
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(checkView);
+      }
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    window.addEventListener("touchmove", onScroll, { passive: true });
+    checkView();
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      window.removeEventListener("touchmove", onScroll);
+    };
+  }, []);
+
+  const hideLeaves = isHovered || isInView;
+
+  return (
+    <div
+      ref={containerRef}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="relative z-10 w-screen left-1/2 -translate-x-1/2 mt-[4vw]"
+    >
+      {/* Retractable Leaves Row:
+          - Sinks inside smoothly on forward scroll / hover (2.2s)
+          - Rises back up neatly and smoothly on backward scroll / unhover (1.8s) */}
+      <div
+        className="relative z-0 block w-full pointer-events-none select-none"
+        style={{
+          transform: hideLeaves ? "translateY(110%)" : "translateY(0%)",
+          transition: hideLeaves
+            ? "transform 2.2s cubic-bezier(0.25, 1, 0.35, 1)"
+            : "transform 1.8s cubic-bezier(0.16, 1, 0.3, 1)",
+          transitionDelay: hideLeaves ? "0.3s" : "0s",
+          willChange: "transform",
+        }}
+      >
+        <Image
+          src="/carpediem-grass-row.png"
+          alt=""
+          width={1920}
+          height={200}
+          className="block w-full h-auto object-contain pointer-events-none select-none"
+        />
+      </div>
+
+      {/* Green Wave Hill + Stats Overlay */}
+      <div className="relative z-20 w-full -mt-[10.2083%]">
+        <Image
+          src="/flagship-wave.png"
+          alt=""
+          width={1920}
+          height={600}
+          data-ball-cover=""
+          className="w-full h-auto top-[20%] object-cover pointer-events-none select-none"
+        />
+        <FlagshipStats />
+      </div>
     </div>
   );
 }
@@ -1085,27 +1183,7 @@ export default function HomePage() {
         <SlopeBall />
 
         {/* Grass + Green Platform */}
-        <div className="relative z-10 w-screen left-1/2 -translate-x-1/2 mt-[4vw]">
-          <Image
-            src="/carpediem-grass-row.png"
-            alt=""
-            width={1920}
-            height={200}
-            className="relative z-0 block w-full h-auto object-contain pointer-events-none select-none"
-          />
-
-          <div className="relative z-20 w-full -mt-[10.2083%]">
-            <Image
-              src="/flagship-wave.png"
-              alt=""
-              width={1920}
-              height={600}
-              data-ball-cover=""
-              className="w-full h-auto top-[20%] object-cover pointer-events-none select-none"
-            />
-            <FlagshipStats />
-          </div>
-        </div>
+        <FlagshipPlatform />
       </section>
 
       {/* The Sponsors maze, pulled up under the wave. Clipped sideways only
