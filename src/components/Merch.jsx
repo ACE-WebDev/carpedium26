@@ -19,6 +19,7 @@ const imgLine13 = `${assetPathPrefix}/b9c88.svg`;
 
 const W = 1455;
 const H = 1950;
+const CANVAS_H = 1340;
 
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
 
@@ -56,8 +57,7 @@ function MerchMobile() {
           position: 'relative',
           width: '100%',
           borderRadius: 20,
-          background:
-            'linear-gradient(to bottom, rgba(239,212,163,0.25) 0%, #dfc298 94.231%)',
+          background: 'linear-gradient(to bottom, rgba(239,212,163,0.25) 0%, #dfc298 94.231%)',
           padding: '12px 12% 0',
           boxSizing: 'border-box',
         }}
@@ -180,7 +180,7 @@ function MerchMobile() {
             gap: 8,
           }}
         >
-          {SIZES.map((label) => (
+          {SIZES.map(label => (
             <li
               key={label}
               style={{
@@ -223,7 +223,7 @@ function MerchMobile() {
 
 export default function Merch() {
   const [scale, setScale] = useState(1);
-  const [isShirtHovered, setIsShirtHovered] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
 
   useEffect(() => {
     const updateScale = () => {
@@ -262,7 +262,7 @@ export default function Merch() {
           width: '100%',
           justifyContent: 'center',
           overflow: 'hidden',
-          height: Math.round(H * scale),
+          height: Math.round(CANVAS_H * scale), // was H * scale
           position: 'relative',
         }}
       >
@@ -310,8 +310,6 @@ export default function Merch() {
           </h1>
 
           <div
-            onMouseEnter={() => setIsShirtHovered(true)}
-            onMouseLeave={() => setIsShirtHovered(false)}
             style={{
               position: 'absolute',
               width: 605,
@@ -328,7 +326,7 @@ export default function Merch() {
                 height: '100%',
                 transformStyle: 'preserve-3d',
                 transition: 'transform 0.6s ease',
-                transform: isShirtHovered ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
               }}
             >
               <img
@@ -360,6 +358,30 @@ export default function Merch() {
               />
             </div>
           </div>
+
+          {/* ── Flip button ── */}
+          <button
+            onClick={() => setIsFlipped(f => !f)}
+            aria-label={isFlipped ? 'Show front of T-shirt' : 'Show back of T-shirt'}
+            style={{
+              position: 'absolute',
+              left: 'calc(50% - 110px)',
+              top: 1190,
+              width: 220,
+              height: 52,
+              zIndex: 5,
+              background: '#fefae0',
+              borderRadius: 50,
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: '"BBH Hegarty", sans-serif',
+              fontSize: 22,
+              color: '#1c1f2a',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {isFlipped ? 'VIEW FRONT' : 'VIEW BACK'}
+          </button>
 
           {/* ── Left annotation ── */}
           <p
@@ -824,115 +846,6 @@ export default function Merch() {
               width: 1288,
             }}
           />
-
-          <p
-            style={{
-              position: 'absolute',
-              fontFamily: '"BBH Hegarty", sans-serif',
-              fontWeight: 400,
-              fontSize: 48,
-              lineHeight: 'normal',
-              color: '#fff',
-              height: 48,
-              left: 'calc(50% - 189px)',
-              top: 1194,
-              width: 377,
-              margin: 0,
-            }}
-          >
-            SIZE CHARTS
-          </p>
-
-          {/* ── SIZE CHARTS green body ── */}
-          <div
-            style={{
-              position: 'absolute',
-              background: '#606c38',
-              height: 402,
-              left: 74,
-              borderRadius: 20,
-              top: 1297,
-              width: 1288,
-            }}
-          />
-
-          {/* ── Size items ── */}
-          {[
-            { label: 'XS', boxTop: 1328, textTop: 1331.14 },
-            { label: 'S', boxTop: 1376.67, textTop: 1380.59 },
-            { label: 'M', boxTop: 1426.12, textTop: 1429.26 },
-            { label: 'L', boxTop: 1474.78, textTop: 1477.92 },
-            { label: 'XL', boxTop: 1524.24, textTop: 1528.16 },
-            { label: '2XL', boxTop: 1572.9, textTop: 1576.04 },
-            { label: '3XL', boxTop: 1622.36, textTop: 1625.5 },
-          ].map(({ label, boxTop, textTop }) => (
-            <div key={label}>
-              <div
-                style={{
-                  position: 'absolute',
-                  background: '#45582d',
-                  height: 43.172,
-                  left: 110,
-                  top: boxTop,
-                  width: 85,
-                }}
-              />
-
-              <p
-                style={{
-                  position: 'absolute',
-                  fontFamily: '"BBH Hegarty", sans-serif',
-                  fontWeight: 400,
-                  fontSize: 28.258,
-                  lineHeight: 'normal',
-                  color: '#fff',
-                  top: textTop,
-                  left: 124,
-                  margin: 0,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {label}
-              </p>
-            </div>
-          ))}
-
-          {/* ── BUY NOW button ── */}
-          <div
-            style={{
-              position: 'absolute',
-              left: 'calc(50% - 151.5px)',
-              top: 1765,
-            }}
-          >
-            <button
-              style={{
-                background: '#1c1f2a',
-                borderRadius: 50.129,
-                height: 76.196,
-                width: 303,
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: '"BBH Hegarty", sans-serif',
-                  fontWeight: 400,
-                  fontSize: 35.09,
-                  lineHeight: 'normal',
-                  color: '#fefae0',
-                  textShadow: '0px 2.005px 4.512px rgba(0,0,0,0.25)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                BUY NOW!
-              </span>
-            </button>
-          </div>
         </div>
       </div>
     </div>
