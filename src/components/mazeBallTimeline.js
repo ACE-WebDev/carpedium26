@@ -12,7 +12,7 @@ export const VB_H = 1731;
    the maze's centre line — and, like that one, sized by the screen's width,
    so the whole maze fits on any screen rather than being cropped to fill a
    fixed-height box. */
-export const HERO_VIEW = { x: 158, y: -100, width: 2028, height: 1831 };
+export const HERO_VIEW = { x: 158, y: -50, width: 2028, height: 1781 };
 
 const WARP_STEPS = 400;
 
