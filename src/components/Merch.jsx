@@ -223,7 +223,7 @@ function MerchMobile() {
 
 export default function Merch() {
   const [scale, setScale] = useState(1);
-  const [isFlipped, setIsFlipped] = useState(false);
+  const [isShirtHovered, setIsShirtHovered] = useState(false);
 
   useEffect(() => {
     const updateScale = () => {
@@ -310,6 +310,8 @@ export default function Merch() {
           </h1>
 
           <div
+            onMouseEnter={() => setIsShirtHovered(true)}
+            onMouseLeave={() => setIsShirtHovered(false)}
             style={{
               position: 'absolute',
               width: 605,
@@ -681,6 +683,279 @@ export default function Merch() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* ── Plant: Group112 ── */}
+          <div
+            style={{
+              position: 'absolute',
+              top: `${(44.07 * H) / 100}px`,
+              right: `${(73.42 * W) / 100}px`,
+              bottom: `${(40 * H) / 100}px`,
+              left: 0,
+            }}
+          >
+            <img
+              src={imgGroup112}
+              alt=""
+              style={{
+                position: 'absolute',
+                inset: 0,
+                maxWidth: 'none',
+                width: '100%',
+                height: '100%',
+              }}
+            />
+          </div>
+
+          {/* ── Plant: Group39574 ── */}
+          <div
+            style={{
+              position: 'absolute',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              top: `${(42.57 * H) / 100}px`,
+              right: `${(78.38 * W) / 100}px`,
+              bottom: `${(35 * H) / 100}px`,
+              left: `${(-11.11 * W) / 100}px`,
+            }}
+          >
+            <div
+              style={{
+                transform: 'rotate(-19.06deg)',
+                flexShrink: 0,
+              }}
+            >
+              <img
+                src={imgGroup39574}
+                alt=""
+                style={{
+                  display: 'block',
+                  maxWidth: 'none',
+                  width: '100%',
+                  height: '100%',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* ── Plant: Group39575 ── */}
+          <div
+            style={{
+              position: 'absolute',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              top: `${(45.7 * H) / 100}px`,
+              right: `${(0.78 * W) / 100}px`,
+              bottom: `${(40 * H) / 100}px`,
+              left: `${(74.1 * W) / 100}px`,
+            }}
+          >
+            <div
+              style={{
+                transform: 'rotate(3.45deg)',
+                flexShrink: 0,
+              }}
+            >
+              <img
+                src={imgGroup39575}
+                alt=""
+                style={{
+                  display: 'block',
+                  maxWidth: 'none',
+                  width: '100%',
+                  height: '100%',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* ── Plant: Group39576 ── */}
+          <div
+            style={{
+              position: 'absolute',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              top: `${(46.82 * H) / 100}px`,
+              right: `${(2.38 * W) / 100}px`,
+              bottom: `${(40 * H) / 100}px`,
+              left: `${(72.5 * W) / 100}px`,
+            }}
+          >
+            <div
+              style={{
+                transform: 'scaleX(-1) rotate(-3.45deg)',
+                flexShrink: 0,
+              }}
+            >
+              <img
+                src={imgGroup39576}
+                alt=""
+                style={{
+                  display: 'block',
+                  maxWidth: 'none',
+                  width: '100%',
+                  height: '100%',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* ── Plant: Group39577 ── */}
+          <div
+            style={{
+              position: 'absolute',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              top: `${(45.42 * H) / 100}px`,
+              right: `${(-1.26 * W) / 100}px`,
+              bottom: `${(40 * H) / 100}px`,
+              left: `${(75.14 * W) / 100}px`,
+            }}
+          >
+            <div
+              style={{
+                transform: 'scaleX(-1) rotate(6.49deg)',
+                flexShrink: 0,
+              }}
+            >
+              <img
+                src={imgGroup39577}
+                alt=""
+                style={{
+                  display: 'block',
+                  maxWidth: 'none',
+                  width: '100%',
+                  height: '100%',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* ── SIZE CHARTS dark banner ── */}
+          <div
+            style={{
+              position: 'absolute',
+              background: '#283618',
+              height: 118,
+              left: 74,
+              borderRadius: 20,
+              top: 1162,
+              width: 1288,
+            }}
+          />
+
+          <p
+            style={{
+              position: 'absolute',
+              fontFamily: '"BBH Hegarty", sans-serif',
+              fontWeight: 400,
+              fontSize: 48,
+              lineHeight: 'normal',
+              color: '#fff',
+              height: 48,
+              left: 'calc(50% - 189px)',
+              top: 1194,
+              width: 377,
+              margin: 0,
+            }}
+          >
+            SIZE CHARTS
+          </p>
+
+          {/* ── SIZE CHARTS green body ── */}
+          <div
+            style={{
+              position: 'absolute',
+              background: '#606c38',
+              height: 402,
+              left: 74,
+              borderRadius: 20,
+              top: 1297,
+              width: 1288,
+            }}
+          />
+
+          {/* ── Size items ── */}
+          {[
+            { label: 'XS', boxTop: 1328, textTop: 1331.14 },
+            { label: 'S', boxTop: 1376.67, textTop: 1380.59 },
+            { label: 'M', boxTop: 1426.12, textTop: 1429.26 },
+            { label: 'L', boxTop: 1474.78, textTop: 1477.92 },
+            { label: 'XL', boxTop: 1524.24, textTop: 1528.16 },
+            { label: '2XL', boxTop: 1572.9, textTop: 1576.04 },
+            { label: '3XL', boxTop: 1622.36, textTop: 1625.5 },
+          ].map(({ label, boxTop, textTop }) => (
+            <div key={label}>
+              <div
+                style={{
+                  position: 'absolute',
+                  background: '#45582d',
+                  height: 43.172,
+                  left: 110,
+                  top: boxTop,
+                  width: 85,
+                }}
+              />
+
+              <p
+                style={{
+                  position: 'absolute',
+                  fontFamily: '"BBH Hegarty", sans-serif',
+                  fontWeight: 400,
+                  fontSize: 28.258,
+                  lineHeight: 'normal',
+                  color: '#fff',
+                  top: textTop,
+                  left: 124,
+                  margin: 0,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {label}
+              </p>
+            </div>
+          ))}
+
+          {/* ── BUY NOW button ── */}
+          <div
+            style={{
+              position: 'absolute',
+              left: 'calc(50% - 151.5px)',
+              top: 1765,
+            }}
+          >
+            <button
+              style={{
+                background: '#1c1f2a',
+                borderRadius: 50.129,
+                height: 76.196,
+                width: 303,
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: '"BBH Hegarty", sans-serif',
+                  fontWeight: 400,
+                  fontSize: 35.09,
+                  lineHeight: 'normal',
+                  color: '#fefae0',
+                  textShadow: '0px 2.005px 4.512px rgba(0,0,0,0.25)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                BUY NOW!
+              </span>
+            </button>
           </div>
 
           {/* ── Plant: Group112 ── */}

@@ -14,11 +14,9 @@ import { HERO_VIEW, VB_H, VB_W } from "./mazeBallTimeline";
 const VIEW_WIDTH = "[--hero-view-w:2028] max-sm:[--hero-view-w:1250]";
 const HERO_ASPECT = `var(--hero-view-w) / ${HERO_VIEW.height}`;
 
-/* HERO_VIEW leaves room above the maze for the navbar, but as a share of
-   the width: on a narrow screen that is thinner than the navbar, which
-   would hide the top of the maze and the ball as it starts. This makes up
-   the difference: the navbar's height (navbar.css) less that room. */
-const NAVBAR_ROOM = `max(0px, calc(clamp(54px, 8vh, 72px) - 100vw * ${-HERO_VIEW.y} / var(--hero-view-w)))`;
+/* Keep enough room for the navbar on narrow screens, then tuck the maze's
+   top edge behind it so the artwork enters from under the menu. */
+const NAVBAR_ROOM = `max(0px, calc(clamp(54px, 8vh, 72px) - 100vw * ${-HERO_VIEW.y} / var(--hero-view-w) - clamp(20px, 3vw, 44px)))`;
 
 /*
  * The hero: the maze with the ball falling through it (BallFall), and what
