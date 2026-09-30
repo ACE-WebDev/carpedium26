@@ -11,6 +11,7 @@ import CircleWipe from "./CircleWipe";
 import { createGlide } from "./scrollGlide";
 import config from "@/config/ballAnimation";
 import { onJump, peekPendingJump, takePendingJump } from "@/lib/homeJump";
+import { supabase } from "@/lib/supabase";
 
 /* Where each navbar jump starts the page: its section as it is once the
    animations before it have played. */
@@ -144,6 +145,7 @@ function FlagshipStats() {
   return (
     <div
       ref={ref}
+      id="flagship-stats-countdown"
       className=" absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[88%] max-w-[1350px] flex items-center justify-around z-30"
     >
       {stats.map((s) => (
@@ -169,6 +171,105 @@ function FlagshipStats() {
           </span>
         </div>
       ))}
+    </div>
+  );
+}
+
+/* ================= FLAGSHIP GRASS & WAVE PLATFORM ================= */
+function FlagshipPlatform() {
+  const containerRef = useRef(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isInView, setIsInView] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    let ticking = false;
+
+    const checkView = () => {
+      ticking = false;
+      const statsEl = document.getElementById("flagship-stats-countdown");
+      if (!statsEl) return;
+
+      const rect = statsEl.getBoundingClientRect();
+      const vh = window.innerHeight;
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+
+      // Threshold:
+      // Mobile: 70% of screen height (starts earlier as soon as countdown enters view)
+      // Desktop: 30% of screen height
+      const threshold = mobile ? vh * 0.70 : vh * 0.30;
+
+      // When above countdown: false (leaves are UP)
+      // When at or below countdown: true (leaves are HIDDEN)
+      // On backward scroll, as soon as you scroll above threshold: false (leaves RISE smoothly)
+      const isPastCountdown = rect.top < threshold;
+      setIsInView(isPastCountdown);
+    };
+
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(checkView);
+      }
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    window.addEventListener("touchmove", onScroll, { passive: true });
+    checkView();
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      window.removeEventListener("touchmove", onScroll);
+    };
+  }, []);
+
+  const hideLeaves = isHovered || isInView;
+
+  return (
+    <div
+      ref={containerRef}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="relative z-10 w-screen left-1/2 -translate-x-1/2 mt-[4vw]"
+    >
+      {/* Retractable Leaves Row:
+          - Sinks inside smoothly on forward scroll / hover (2.2s)
+          - Rises back up neatly and smoothly on backward scroll / unhover (1.8s) */}
+      <div
+        className="relative z-0 block w-full pointer-events-none select-none"
+        style={{
+          transform: hideLeaves ? "translateY(110%)" : "translateY(0%)",
+          transition: hideLeaves
+            ? "transform 2.2s cubic-bezier(0.25, 1, 0.35, 1)"
+            : "transform 1.8s cubic-bezier(0.16, 1, 0.3, 1)",
+          transitionDelay: hideLeaves ? (isMobile ? "0.05s" : "0.3s") : "0s",
+          willChange: "transform",
+        }}
+      >
+        <Image
+          src="/carpediem-grass-row.png"
+          alt=""
+          width={1920}
+          height={200}
+          className="block w-full h-auto object-contain pointer-events-none select-none"
+        />
+      </div>
+
+      {/* Green Wave Hill + Stats Overlay */}
+      <div className="relative z-20 w-full -mt-[10.2083%]">
+        <Image
+          src="/flagship-wave.png"
+          alt=""
+          width={1920}
+          height={600}
+          data-ball-cover=""
+          className="w-full h-auto top-[20%] object-cover pointer-events-none select-none"
+        />
+        <FlagshipStats />
+      </div>
     </div>
   );
 }
@@ -373,6 +474,244 @@ function BallTrack({ className = "", trailColor = "#C28B5B", enabled = true }) {
   );
 }
 
+/* ================= SPONSOR LOGOS OVERLAY ================= */
+function resolveImageUrl(url) {
+  if (!url) return "";
+  let clean = url.trim().replace(/^["']+|["']+$/g, "");
+  const dashboardMatch = clean.match(
+    /supabase\.com\/dashboard\/project\/([^/]+)\/storage\/files\/buckets\/([^/?]+)\?preview=([^&]+)/
+  );
+  if (dashboardMatch) {
+    const [, project, bucket, filename] = dashboardMatch;
+    return `https://${project}.supabase.co/storage/v1/object/public/${bucket}/${decodeURIComponent(filename)}`;
+  }
+  return clean;
+}
+
+function SponsorBadge({ logo, isActive, onRegisterRef, badgeHeight }) {
+  const { id, img_url, Name, name, text } = logo;
+  const displayName = Name || name || text || "Sponsor";
+  const resolvedUrl = resolveImageUrl(img_url);
+  const calculatedHeight = badgeHeight ? `${badgeHeight}px` : undefined;
+
+  return (
+    <div
+      ref={(el) => onRegisterRef?.(id, el)}
+      className={`relative flex items-center justify-center p-1.5 md:p-2.5 bg-white/95 rounded-lg md:rounded-xl box-border cursor-pointer select-none transition-all duration-300 ${
+        isActive
+          ? "scale-[1.18] md:scale-[1.22] z-30 shadow-[0_20px_42px_rgba(0,0,0,0.38)]"
+          : "scale-100 z-10 shadow-[0_4px_14px_rgba(0,0,0,0.20)] hover:scale-105 hover:shadow-[0_8px_20px_rgba(0,0,0,0.3)]"
+      } h-[clamp(36px,5.8vw,86px)] max-w-[clamp(90px,20vw,250px)] min-w-[clamp(70px,13vw,140px)]`}
+      style={{
+        height: calculatedHeight,
+        transitionTimingFunction: isActive
+          ? "cubic-bezier(0.34, 1.56, 0.64, 1)"
+          : "cubic-bezier(0.25, 1, 0.5, 1)",
+      }}
+    >
+      {resolvedUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={resolvedUrl}
+          alt={displayName}
+          className="w-full h-full object-contain pointer-events-none transition-transform duration-300"
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+            const fallback = e.currentTarget.nextElementSibling;
+            if (fallback) fallback.style.display = "block";
+          }}
+        />
+      ) : null}
+      <span
+        className={`text-center font-bold text-[#1C1F2A] text-[clamp(10px,1.3vw,16px)] font-sans truncate px-1 pointer-events-none ${
+          resolvedUrl ? "hidden" : "block"
+        }`}
+      >
+        {displayName}
+      </span>
+    </div>
+  );
+}
+
+function SponsorLogos({ boxRef, lanes = [358, 781] }) {
+  const [logos, setLogos] = useState([]);
+  const [laneYs, setLaneYs] = useState({ topY: "32.1%", bottomY: "70.1%", laneHeight: null });
+  const [activeId, setActiveId] = useState(null);
+  const badgeElementsRef = useRef({});
+
+  useEffect(() => {
+    async function fetchLogos() {
+      try {
+        const { data, error } = await supabase
+          .from("Logos")
+          .select("*")
+          .order("id", { ascending: true });
+        if (error) {
+          console.error("Supabase Logos error:", error.message);
+        } else if (data && data.length > 0) {
+          setLogos(data);
+        }
+      } catch (err) {
+        console.error("Supabase fetch error:", err);
+      }
+    }
+    fetchLogos();
+  }, []);
+
+  useEffect(() => {
+    const box = boxRef?.current;
+    if (!box) return;
+
+    const measure = () => {
+      const img = box.querySelector("img[data-run]");
+      if (!img?.naturalHeight || !img?.clientHeight) return;
+      const b = box.getBoundingClientRect();
+      const i = img.getBoundingClientRect();
+      if (!b.height) return;
+
+      const s = i.height / img.naturalHeight;
+      const y0 = (i.top - b.top + lanes[0] * s) / b.height;
+      const y1 = (i.top - b.top + lanes[1] * s) / b.height;
+      const laneH = Math.round(112 * s);
+
+      setLaneYs({
+        topY: `${(y0 * 100).toFixed(2)}%`,
+        bottomY: `${(y1 * 100).toFixed(2)}%`,
+        laneHeight: laneH,
+      });
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(box);
+
+    const img = box.querySelector("img[data-run]");
+    if (img) img.addEventListener("load", measure);
+
+    return () => {
+      ro.disconnect();
+      if (img) img.removeEventListener("load", measure);
+    };
+  }, [boxRef, lanes]);
+
+  // Listen to ball position events emitted by MazeRun
+  useEffect(() => {
+    const box = boxRef?.current;
+    if (!box) return;
+
+    const handleBallMove = (e) => {
+      const { x, y, active } = e.detail || {};
+      if (!active) {
+        setActiveId((prev) => (prev !== null ? null : prev));
+        return;
+      }
+
+      const boxRect = box.getBoundingClientRect();
+      if (!boxRect.width || !boxRect.height) return;
+
+      let closestId = null;
+      let minDistance = Infinity;
+
+      for (const [idKey, el] of Object.entries(badgeElementsRef.current)) {
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        const badgeCenterX = rect.left - boxRect.left + rect.width / 2;
+        const badgeCenterY = rect.top - boxRect.top + rect.height / 2;
+
+        const dx = Math.abs(x - badgeCenterX);
+        const dy = Math.abs(y - badgeCenterY);
+
+        const hitThresholdX = Math.max(rect.width * 0.72, 55);
+        const hitThresholdY = Math.max(rect.height * 1.15, 45);
+
+        if (dx <= hitThresholdX && dy <= hitThresholdY) {
+          const dist = Math.hypot(dx, dy);
+          if (dist < minDistance) {
+            minDistance = dist;
+            closestId = isNaN(Number(idKey)) ? idKey : Number(idKey);
+          }
+        }
+      }
+
+      setActiveId((prev) => (prev !== closestId ? closestId : prev));
+    };
+
+    box.addEventListener("mazerun:ball", handleBallMove);
+    return () => {
+      box.removeEventListener("mazerun:ball", handleBallMove);
+    };
+  }, [boxRef]);
+
+  // Specific ordering: 3, 2, 6 on top; remaining 4 on bottom
+  const topIds = [3, 2, 6];
+  const topFromDb = topIds
+    .map((id) => logos.find((l) => l.id === id))
+    .filter(Boolean);
+
+  const bottomFromDb = logos.filter((l) => !topIds.includes(l.id));
+
+  // Fallbacks matching reference image if DB rows are not yet populated
+  const fallbackTop = [
+    { id: 3, Name: "Touriga", text: "Touriga" },
+    { id: 2, Name: "Bharath Snacks", text: "BHARATH SNACKS" },
+    { id: 6, Name: "PS4 Gaming Lounge", text: "PS4 GAMING LOUNGE" },
+  ];
+
+  const fallbackBottom = [
+    { id: 1, Name: "Aussie Bites", text: "Aussie Bites" },
+    { id: 4, Name: "BOCS Pizza", text: "BOCS PIZZA" },
+    { id: 5, Name: "Koblerr", text: "Koblerr" },
+    { id: 7, Name: "Sponsor 4", text: "Sponsor 4" },
+  ];
+
+  const displayTop = topFromDb.length > 0 ? topFromDb : fallbackTop;
+  const displayBottom = bottomFromDb.length > 0 ? bottomFromDb : fallbackBottom;
+
+  const handleRegisterRef = (id, el) => {
+    if (el) {
+      badgeElementsRef.current[id] = el;
+    } else {
+      delete badgeElementsRef.current[id];
+    }
+  };
+
+  return (
+    <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden">
+      {/* Top Track Row (3 logos: 3, 2, 6) */}
+      <div
+        className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[1260px] flex items-center justify-around pointer-events-auto"
+        style={{ top: laneYs.topY }}
+      >
+        {displayTop.map((logo) => (
+          <SponsorBadge
+            key={logo.id}
+            logo={logo}
+            badgeHeight={laneYs.laneHeight ? Math.round(laneYs.laneHeight * 0.84) : null}
+            isActive={activeId === logo.id}
+            onRegisterRef={handleRegisterRef}
+          />
+        ))}
+      </div>
+
+      {/* Bottom Track Row (4 logos: remaining) */}
+      <div
+        className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-[94%] max-w-[1380px] flex items-center justify-around pointer-events-auto"
+        style={{ top: laneYs.bottomY }}
+      >
+        {displayBottom.map((logo) => (
+          <SponsorBadge
+            key={logo.id}
+            logo={logo}
+            badgeHeight={laneYs.laneHeight ? Math.round(laneYs.laneHeight * 0.74) : null}
+            isActive={activeId === logo.id}
+            onRegisterRef={handleRegisterRef}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ================= BALL RUN over a single maze image (serpentine lanes) ================= */
 /* The least scrolling the whole run takes, in screen heights. */
 const RUN_SCREENS = 1.2;
@@ -537,6 +876,12 @@ function MazeRun({
       ball.setAttribute("transform", `translate(${pt.x} ${pt.y}) rotate(${roll})`);
       const trailLen = Math.max(0, len - geo.r * 1.2);
       trail.style.strokeDashoffset = String(total - trailLen);
+
+      box.dispatchEvent(
+        new CustomEvent("mazerun:ball", {
+          detail: { x: pt.x, y: pt.y, active: p > 0.005 && p < 0.995 },
+        })
+      );
     };
 
     // Re-created whenever the layout is re-measured, so it starts from
@@ -558,6 +903,11 @@ function MazeRun({
       window.removeEventListener("resize", repace);
       pageObserver.disconnect();
       glide.stop();
+      box.dispatchEvent(
+        new CustomEvent("mazerun:ball", {
+          detail: { x: 0, y: 0, active: false },
+        })
+      );
       repaceRef.current = null;
     };
   }, [geo, boxRef]);
@@ -566,7 +916,7 @@ function MazeRun({
 
   return (
     <svg
-      className="pointer-events-none absolute inset-0 z-[1]"
+      className="pointer-events-none absolute inset-0 z-[15]"
       width="100%"
       height="100%"
       viewBox={`0 0 ${geo.W} ${geo.H}`}
@@ -908,6 +1258,7 @@ function BarDrop({
 export default function HomePage() {
   // The middles of the two gaps between the bars in sponsorsection.png the
   // ball runs along (rows 301–416 and 730–835), in its own px.
+  const SPACE_LANES = [358, 781];
   const spaceRef = useRef(null);
   const gapRef = useRef(null);
   const ballTargetRef = useRef(null);
@@ -1175,27 +1526,7 @@ export default function HomePage() {
         <SlopeBall />
 
         {/* Grass + Green Platform */}
-        <div className="relative z-10 w-screen left-1/2 -translate-x-1/2 mt-[4vw]">
-          <Image
-            src="/carpediem-grass-row.png"
-            alt=""
-            width={1920}
-            height={200}
-            className="relative z-0 block w-full h-auto object-contain pointer-events-none select-none"
-          />
-
-          <div className="relative z-20 w-full -mt-[10.2083%]">
-            <Image
-              src="/flagship-wave.png"
-              alt=""
-              width={1920}
-              height={600}
-              data-ball-cover=""
-              className="w-full h-auto top-[20%] object-cover pointer-events-none select-none"
-            />
-            <FlagshipStats />
-          </div>
-        </div>
+        <FlagshipPlatform />
       </section>
 
       {/* The Sponsors maze, pulled up under the wave. Clipped sideways only
@@ -1288,6 +1619,9 @@ export default function HomePage() {
             className="block w-full h-auto -mt-[9%] max-sm:-mt-[15%] origin-top scale-x-[1.25] max-sm:scale-x-[1.9] max-sm:scale-y-[1.5] pointer-events-none select-none"
           />
 
+          {/* Sponsor Logos: 3 on top track (3, 2, 6) & 4 on bottom track */}
+          <SponsorLogos boxRef={spaceRef} lanes={SPACE_LANES} />
+
           {/* The second of the three balls here, in turn: it waits for the
               Sponsors maze ball's blackout, and the fall below waits for it. */}
           <MazeRun
@@ -1312,7 +1646,7 @@ export default function HomePage() {
             alt=""
             width={1000}
             height={200}
-            className="relative z-10 block w-[54%] aspect-[500/65] -mt-[14%] object-cover object-left pointer-events-none select-none"
+            className="relative z-10 block w-[54%] aspect-[500/50] -mt-[14%] object-cover object-left pointer-events-none select-none"
           />
 
         {/* The ball's last run rolls along the top of this bar, between it
@@ -1323,7 +1657,7 @@ export default function HomePage() {
           width={1000}
           height={200}
           data-ball-floor=""
-          className="relative z-10 block w-[54%] aspect-[500/65] object-cover object-left mt-[5%] pointer-events-none select-none"
+          className="relative z-10 block w-[54%] aspect-[500/50] object-cover object-left mt-[5%] pointer-events-none select-none"
         />
 
         {/* The ball's last run: along the bars above, down through this
