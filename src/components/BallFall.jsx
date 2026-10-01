@@ -153,6 +153,8 @@ const VARIANTS = {
     },
     // Once the opening sequence has handed over to the page.
     autoReady: () => document.body.classList.contains("opening-done"),
+    autoStartDelay: 0,
+    autoThenScrollMs: 5000,
     announce: true,
   },
 
@@ -375,6 +377,9 @@ export default function BallFall({ variant }) {
     if (!setup || !svg || !shrink || !ball || !root) return;
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (setup.autoThenScrollMs && !reduced.matches) {
+      ball.style.visibility = "hidden";
+    }
     if (setup.vanishMs && !reduced.matches) {
       shrink.style.transition = `transform ${setup.vanishMs}ms ease-in`;
     }
@@ -599,7 +604,29 @@ export default function BallFall({ variant }) {
       const top = pin
         ? pin.track.getBoundingClientRect().top + sceneOffset
         : root.getBoundingClientRect().top;
-      return Math.min(1, Math.max(0, (top0 - top) / span));
+      const raw = Math.min(1, Math.max(0, (top0 - top) / span));
+      if (!heroHandoff) return raw;
+      const remaining = Math.max(0.000001, 1 - heroHandoff.fromRaw);
+      return Math.min(
+        1,
+        Math.max(
+          0,
+          heroHandoff.fromProgress +
+            ((raw - heroHandoff.fromRaw) * (1 - heroHandoff.fromProgress)) / remaining
+        )
+      );
+    };
+
+    let heroHandoff = null;
+    const progressAtIndex = (index) => {
+      let low = 0;
+      let high = 1;
+      for (let i = 0; i < 24; i++) {
+        const middle = (low + high) / 2;
+        if (indexAt(geometry.warp, middle) < index) low = middle;
+        else high = middle;
+      }
+      return (low + high) / 2;
     };
 
     // The moment the ball touches its landing art: announced once, with
@@ -673,6 +700,18 @@ export default function BallFall({ variant }) {
       autoFrame = 0;
       if (!geometry || arrivedAt !== null || landed) return;
       const index = autoIndex(now);
+      if (setup.autoThenScrollMs && now - startedAt >= setup.autoThenScrollMs) {
+        const { top0, span, sceneOffset } = geometry;
+        const top = pin
+          ? pin.track.getBoundingClientRect().top + sceneOffset
+          : root.getBoundingClientRect().top;
+        heroHandoff = {
+          fromRaw: Math.min(1, Math.max(0, (top0 - top) / span)),
+          fromProgress: progressAtIndex(index),
+        };
+        glide.jump();
+        return;
+      }
       if (index >= geometry.touchIndex) {
         if (setup.announce) arrive();
         else {
@@ -695,16 +734,24 @@ export default function BallFall({ variant }) {
       if (scrolled < geometry.notBefore) return;
       startTimer = window.setTimeout(() => {
         startedAt = performance.now();
+        ball.style.visibility = "visible";
         autoFrame = requestAnimationFrame(autoTick);
-      }, config.auto.startDelay);
+      }, setup.autoStartDelay ?? config.auto.startDelay);
     };
 
     /* --------------------------------------------------------- shared */
 
     const onScroll = () => {
       if (reduced.matches) return; // the ball just rests at the end
-      if (MODE === "auto") maybeStartAuto();
-      else glide.update();
+      if (MODE === "auto") {
+        maybeStartAuto();
+        return;
+      }
+      if (setup.autoThenScrollMs && !heroHandoff) {
+        maybeStartAuto();
+        return;
+      }
+      glide.update();
     };
 
     // Re-measures, then puts the ball straight where it belongs rather than
@@ -722,6 +769,8 @@ export default function BallFall({ variant }) {
       } else if (MODE === "auto") {
         placeAt(Math.min(autoIndex(performance.now()), geometry.touchIndex));
         maybeStartAuto();
+      } else if (setup.autoThenScrollMs && startedAt !== null && !heroHandoff) {
+        placeAt(Math.min(autoIndex(performance.now()), geometry.touchIndex));
       } else {
         glide.jump();
       }
@@ -773,7 +822,9 @@ export default function BallFall({ variant }) {
         lastHeight = height;
         relayout();
       }
-      if (MODE === "auto" && !reduced.matches) maybeStartAuto();
+      if ((MODE === "auto" || setup.autoThenScrollMs) && !reduced.matches) {
+        maybeStartAuto();
+      }
     }, 250);
 
     window.addEventListener("scroll", onScroll, { passive: true });
