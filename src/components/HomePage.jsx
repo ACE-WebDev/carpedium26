@@ -324,7 +324,9 @@ function PerformerFan({ images = FAN_IMAGES }) {
     };
   }, [isTouch]);
 
+
   const spread = isTouch ? 50 : 65;
+
   const rotation = isTouch ? 10 : 20;
   const imageSizes = "(max-width: 500px) 48vw, (max-width: 767px) 240px, (hover: none) 240px, (max-width: 1600px) 32vw, 520px";
   const cardClass =
@@ -335,7 +337,9 @@ function PerformerFan({ images = FAN_IMAGES }) {
       ref={ref}
       className="relative z-10 cursor-pointer"
       style={{
+
         width: isTouch ? "min(35vw, 240px)" : "min(32vw, 520px)",
+       
         aspectRatio: "3 / 2",
       }}
       onMouseEnter={() => !isTouch && setOpen(true)}
