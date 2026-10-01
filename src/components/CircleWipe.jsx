@@ -32,7 +32,7 @@ const {
 } = config.blackout;
 
 /* The circle's own diameter before scaling. Scaling from a fixed base keeps
-   the maths simple; it is sized up to cover the viewport's diagonal. */
+   the maths simple; it is sized past the viewport's farthest corner. */
 const BASE = 100;
 
 /* Locks scrolling without the page jumping: `position: fixed` alone would
@@ -118,12 +118,24 @@ export default function CircleWipe({ trigger = "hero", originRef, onCovered, onD
         ? { x: box.left + box.width / 2, y: box.top + box.height / 2 }
         : { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 
-    // Far enough to cover the most distant corner from that point.
-    const reach = Math.hypot(
-      Math.max(point.x, window.innerWidth - point.x),
-      Math.max(point.y, window.innerHeight - point.y)
+    // Use the largest viewport measurement so mobile browser chrome or a
+    // visual viewport resize cannot leave a corner uncovered. The 25% margin
+    // gives the expanding circle enough overlap to cover the full screen.
+    const viewportWidth = Math.max(
+      window.innerWidth,
+      document.documentElement.clientWidth,
+      window.visualViewport?.width ?? 0
     );
-    setOrigin({ ...point, scale: (reach * 2.1) / BASE });
+    const viewportHeight = Math.max(
+      window.innerHeight,
+      document.documentElement.clientHeight,
+      window.visualViewport?.height ?? 0
+    );
+    const reach = Math.hypot(
+      Math.max(Math.abs(point.x), Math.abs(viewportWidth - point.x)),
+      Math.max(Math.abs(point.y), Math.abs(viewportHeight - point.y))
+    );
+    setOrigin({ ...point, scale: (reach * 2.5) / BASE });
 
     // A forced full-screen blackout is the kind of motion this setting
     // exists to avoid, so switch straight to the next section, unanimated.
@@ -190,6 +202,7 @@ export default function CircleWipe({ trigger = "hero", originRef, onCovered, onD
           left: origin.x - BASE / 2,
           top: origin.y - BASE / 2,
           transform: `scale(${grown ? origin.scale : 0})`,
+          transformOrigin: "center",
           transition: `transform ${
             phase === "grow" ? GROW_MS : SHRINK_MS
           }ms ${EASE}`,

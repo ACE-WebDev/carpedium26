@@ -13,7 +13,7 @@ import {
   withRollIn,
 } from "./mazeBallTimeline";
 import { createGlide } from "./scrollGlide";
-import { navbarBottom, pageTop, pinOf, setPin } from "./BallPin";
+import { pageTop, pinOf, pinViewport, setPin } from "./BallPin";
 
 /*
  * A ball falling through the maze: a physics simulation (mazeBallPhysics.js)
@@ -81,8 +81,8 @@ function scrollRangeBelow({
   sceneOffset,
   earliestTop,
   lines,
+  vh = window.innerHeight,
 }) {
-  const vh = window.innerHeight;
   // A scene that fits on screen under the navbar is held there, centred,
   // for its whole fall. Either way the fall begins no earlier than
   // `earliestTop` allows: where the root is when the page is scrolled as
@@ -153,6 +153,8 @@ const VARIANTS = {
     },
     // Once the opening sequence has handed over to the page.
     autoReady: () => document.body.classList.contains("opening-done"),
+    autoStartDelay: 0,
+    autoThenScrollMs: 5000,
     announce: true,
   },
 
@@ -375,6 +377,9 @@ export default function BallFall({ variant }) {
     if (!setup || !svg || !shrink || !ball || !root) return;
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (setup.autoThenScrollMs && !reduced.matches) {
+      ball.style.visibility = "hidden";
+    }
     if (setup.vanishMs && !reduced.matches) {
       shrink.style.transition = `transform ${setup.vanishMs}ms ease-in`;
     }
@@ -388,6 +393,7 @@ export default function BallFall({ variant }) {
     // with its last leg aimed at the landing art as it currently sits, and
     // how scroll is paced onto it for this viewport.
     let geometry = null;
+    let viewport = null;
     // The landing art's pixels, and which image they were read from.
     let art = null;
     let artSrc = "";
@@ -460,8 +466,8 @@ export default function BallFall({ variant }) {
       // fall begins. Its scene is then held there for the first `hold` px
       // of scrolling, where it can be, and moves on with the page for the
       // rest of `span`, until the ball touches down.
-      const vh = window.innerHeight;
-      const navBottom = navbarBottom();
+      viewport = pinViewport(pin);
+      const { height: vh, navBottom } = viewport;
       const clearance = navBottom + config.scroll.navbarMargin;
       const holds =
         MODE === "scroll" &&
@@ -486,6 +492,7 @@ export default function BallFall({ variant }) {
         : NaN;
       const notBefore = Number.isFinite(runEnd) ? runEnd + vh * AFTER_GAP : 0;
       const range = setup.scrollRange({
+        vh,
         rootBox,
         startY,
         targetY: endY,
@@ -597,7 +604,29 @@ export default function BallFall({ variant }) {
       const top = pin
         ? pin.track.getBoundingClientRect().top + sceneOffset
         : root.getBoundingClientRect().top;
-      return Math.min(1, Math.max(0, (top0 - top) / span));
+      const raw = Math.min(1, Math.max(0, (top0 - top) / span));
+      if (!heroHandoff) return raw;
+      const remaining = Math.max(0.000001, 1 - heroHandoff.fromRaw);
+      return Math.min(
+        1,
+        Math.max(
+          0,
+          heroHandoff.fromProgress +
+            ((raw - heroHandoff.fromRaw) * (1 - heroHandoff.fromProgress)) / remaining
+        )
+      );
+    };
+
+    let heroHandoff = null;
+    const progressAtIndex = (index) => {
+      let low = 0;
+      let high = 1;
+      for (let i = 0; i < 24; i++) {
+        const middle = (low + high) / 2;
+        if (indexAt(geometry.warp, middle) < index) low = middle;
+        else high = middle;
+      }
+      return (low + high) / 2;
     };
 
     // The moment the ball touches its landing art: announced once, with
@@ -671,6 +700,18 @@ export default function BallFall({ variant }) {
       autoFrame = 0;
       if (!geometry || arrivedAt !== null || landed) return;
       const index = autoIndex(now);
+      if (setup.autoThenScrollMs && now - startedAt >= setup.autoThenScrollMs) {
+        const { top0, span, sceneOffset } = geometry;
+        const top = pin
+          ? pin.track.getBoundingClientRect().top + sceneOffset
+          : root.getBoundingClientRect().top;
+        heroHandoff = {
+          fromRaw: Math.min(1, Math.max(0, (top0 - top) / span)),
+          fromProgress: progressAtIndex(index),
+        };
+        glide.jump();
+        return;
+      }
       if (index >= geometry.touchIndex) {
         if (setup.announce) arrive();
         else {
@@ -693,16 +734,24 @@ export default function BallFall({ variant }) {
       if (scrolled < geometry.notBefore) return;
       startTimer = window.setTimeout(() => {
         startedAt = performance.now();
+        ball.style.visibility = "visible";
         autoFrame = requestAnimationFrame(autoTick);
-      }, config.auto.startDelay);
+      }, setup.autoStartDelay ?? config.auto.startDelay);
     };
 
     /* --------------------------------------------------------- shared */
 
     const onScroll = () => {
       if (reduced.matches) return; // the ball just rests at the end
-      if (MODE === "auto") maybeStartAuto();
-      else glide.update();
+      if (MODE === "auto") {
+        maybeStartAuto();
+        return;
+      }
+      if (setup.autoThenScrollMs && !heroHandoff) {
+        maybeStartAuto();
+        return;
+      }
+      glide.update();
     };
 
     // Re-measures, then puts the ball straight where it belongs rather than
@@ -720,6 +769,8 @@ export default function BallFall({ variant }) {
       } else if (MODE === "auto") {
         placeAt(Math.min(autoIndex(performance.now()), geometry.touchIndex));
         maybeStartAuto();
+      } else if (setup.autoThenScrollMs && startedAt !== null && !heroHandoff) {
+        placeAt(Math.min(autoIndex(performance.now()), geometry.touchIndex));
       } else {
         glide.jump();
       }
@@ -771,11 +822,16 @@ export default function BallFall({ variant }) {
         lastHeight = height;
         relayout();
       }
-      if (MODE === "auto" && !reduced.matches) maybeStartAuto();
+      if ((MODE === "auto" || setup.autoThenScrollMs) && !reduced.matches) {
+        maybeStartAuto();
+      }
     }, 250);
 
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", relayout);
+    const onResize = () => {
+      if (pinViewport(pin) !== viewport) relayout();
+    };
+    window.addEventListener("resize", onResize);
     // What plays before it has been re-paced: when this may start moves.
     if (setup.after) window.addEventListener("ballrun:paced", relayout);
     const observer = new ResizeObserver(relayout);
@@ -788,7 +844,7 @@ export default function BallFall({ variant }) {
       glide.stop();
       if (autoFrame) cancelAnimationFrame(autoFrame);
       window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", relayout);
+      window.removeEventListener("resize", onResize);
       window.removeEventListener("ballrun:paced", relayout);
       observer.disconnect();
     };
