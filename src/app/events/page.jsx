@@ -11,7 +11,7 @@ export default async function EventsPage() {
   // Server-side fetch — runs at request time, auto-updates as DB changes
   const { data: events, error } = await supabase
     .from('Events')
-    .select('id, Name, Venue, Time, img_url')
+    .select('id, Name, Venue, Time, img_url, gform_link, category')
     .order('id', { ascending: true });
 
   if (error) console.error('Supabase fetch error:', error.message);

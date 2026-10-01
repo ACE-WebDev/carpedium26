@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 const CATEGORIES = [
-  'Music', 'Dance', 'English', 'Tamil',
+  'All', 'Music', 'Dance', 'English', 'Tamil',
   'Telugu', 'Hindi', 'Fun', 'Arts', 'Design',
 ];
 
@@ -17,22 +17,22 @@ const TICKET_DARK = '#1e1508';  // outer dark ticket frame
 const gridStyles = `
   .esf-badge-grid {
     display: grid;
-    grid-template-columns: repeat(9, 1fr);
-    gap: clamp(6px, 0.8vw, 10px);
+    grid-template-columns: repeat(10, 1fr);
+    gap: clamp(5px, 0.7vw, 10px);
     width: 100%;
   }
 
-  @media (max-width: 860px) {
+  @media (max-width: 960px) {
     .esf-badge-grid {
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 8px;
     }
   }
 
   @media (max-width: 480px) {
     .esf-badge-grid {
-      grid-template-columns: repeat(3, 1fr);
-      gap: 6px;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 5px;
     }
   }
 
@@ -42,7 +42,7 @@ const gridStyles = `
 `;
 
 /* ─── TicketBadge ─────────────────────────────────────────────────────────── */
-function TicketBadge({ label }) {
+function TicketBadge({ label, selected, onClick }) {
   const [hovered, setHovered] = useState(false);
 
   /*
@@ -50,21 +50,27 @@ function TicketBadge({ label }) {
    * • Directly sits on the background (no dark brown outer frame/borders)
    * • 7px chamfered corners matching the vintage ticket aesthetic
    * • Warm golden gradient matching navbar #C28B5B
-   * • Subtle cream inner border
+   * • Highlighted / glowing state when selected
    */
   const badgeStyle = {
     width: '100%',
     padding: '13px 4px',
     boxSizing: 'border-box',
     textAlign: 'center',
-    background: hovered
+    background: selected
+      ? 'linear-gradient(160deg, #fff3dc 0%, #edd4a3 40%, #dfbf88 100%)'
+      : hovered
       ? 'linear-gradient(160deg, #e8b87a 0%, #cc9460 35%, #b47844 70%, #9e6432 100%)'
       : 'linear-gradient(160deg, #daa86e 0%, #c28b5b 35%, #a87040 70%, #945e2c 100%)',
     borderRadius: '4px',
     clipPath:
       'polygon(7px 0%, calc(100% - 7px) 0%, 100% 7px, 100% calc(100% - 7px), calc(100% - 7px) 100%, 7px 100%, 0% calc(100% - 7px), 0% 7px)',
-    border: '1.5px solid rgba(255, 248, 215, 0.85)',
-    boxShadow: hovered
+    border: selected
+      ? '1.5px solid #ffffff'
+      : '1.5px solid rgba(255, 248, 215, 0.85)',
+    boxShadow: selected
+      ? '0 0 0 2px rgba(255, 248, 220, 0.8), 0 8px 20px rgba(0, 0, 0, 0.55), 0 0 16px rgba(239, 212, 163, 0.6)'
+      : hovered
       ? '0 6px 16px rgba(0, 0, 0, 0.45), 0 0 12px rgba(194, 139, 91, 0.35)'
       : '0 2px 8px rgba(0, 0, 0, 0.3)',
     cursor: 'pointer',
@@ -73,7 +79,11 @@ function TicketBadge({ label }) {
     alignItems: 'center',
     justifyContent: 'center',
     transition: 'transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease',
-    transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
+    transform: selected
+      ? 'translateY(-3px) scale(1.03)'
+      : hovered
+      ? 'translateY(-2px)'
+      : 'translateY(0)',
   };
 
   const innerBorder = {
@@ -82,7 +92,9 @@ function TicketBadge({ label }) {
     borderRadius: '3px',
     clipPath:
       'polygon(5px 0%, calc(100% - 5px) 0%, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0% calc(100% - 5px), 0% 5px)',
-    border: '1px solid rgba(255, 248, 215, 0.4)',
+    border: selected
+      ? '1px solid rgba(255, 255, 255, 0.9)'
+      : '1px solid rgba(255, 248, 215, 0.4)',
     pointerEvents: 'none',
   };
 
@@ -103,8 +115,18 @@ function TicketBadge({ label }) {
   return (
     <div
       style={badgeStyle}
+      onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      role="button"
+      tabIndex={0}
+      aria-pressed={selected}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
     >
       <span style={innerBorder} aria-hidden="true" />
       <span style={labelStyle}>{label}</span>
@@ -113,7 +135,13 @@ function TicketBadge({ label }) {
 }
 
 /* ─── EventSearchFilter ──────────────────────────────────────────────────── */
-export default function EventSearchFilter({ query: controlledQuery, onQueryChange, onShuffle }) {
+export default function EventSearchFilter({
+  query: controlledQuery,
+  onQueryChange,
+  onShuffle,
+  selectedCategory = '',
+  onSelectCategory,
+}) {
   const [internalQuery, setInternalQuery] = useState('');
   const [focused, setFocused] = useState(false);
   const [shuffleHovered, setShuffleHovered] = useState(false);
@@ -227,11 +255,28 @@ export default function EventSearchFilter({ query: controlledQuery, onQueryChang
 
         {/* ── Category Ticket Badges — CSS Grid for equal sizing ── */}
         <div className="esf-badge-grid" role="list" aria-label="Event categories">
-          {CATEGORIES.map((cat) => (
-            <div key={cat} className="esf-badge-cell" role="listitem">
-              <TicketBadge label={cat} />
-            </div>
-          ))}
+          {CATEGORIES.map((cat) => {
+            const isSelected =
+              cat === 'All'
+                ? !selectedCategory || selectedCategory.toLowerCase() === 'all'
+                : selectedCategory.trim().toLowerCase() === cat.toLowerCase();
+
+            return (
+              <div key={cat} className="esf-badge-cell" role="listitem">
+                <TicketBadge
+                  label={cat}
+                  selected={isSelected}
+                  onClick={() => {
+                    if (cat === 'All' || isSelected) {
+                      onSelectCategory?.('');
+                    } else {
+                      onSelectCategory?.(cat);
+                    }
+                  }}
+                />
+              </div>
+            );
+          })}
         </div>
 
         {/* ── Search Bar & Shuffle Row ── */}
