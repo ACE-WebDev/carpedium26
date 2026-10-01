@@ -17,7 +17,7 @@ const imgLine13 = `${assetPathPrefix}/b9c88.svg`;
 
 const W = 1455;
 const H = 1950;
-const CANVAS_H = 1340;
+const CANVAS_H = 1225;
 
 function ShirtPreview({ isFlipped, onFlip }) {
   const faceStyle = {
@@ -100,39 +100,114 @@ function MerchMobile({ isFlipped, onFlip }) {
           background: 'linear-gradient(to bottom, rgba(239,212,163,0.25) 0%, #dfc298 94.231%)',
           padding: '12px 12% 0',
           boxSizing: 'border-box',
+          overflow: 'hidden',
         }}
       >
         <div style={{ width: '100%', aspectRatio: '2386 / 2617' }}>
           <ShirtPreview isFlipped={isFlipped} onFlip={onFlip} />
         </div>
-        <img
-          src={imgGroup39574}
-          alt=""
-          aria-hidden="true"
+
+        {/* Left Corner Leaf Cluster */}
+        <div
           style={{
             position: 'absolute',
-            left: -6,
+            left: '-12%',
             bottom: 0,
-            width: '24%',
-            height: 'auto',
-            transform: 'rotate(-19.06deg)',
+            width: '32%',
+            aspectRatio: '382 / 336',
             pointerEvents: 'none',
           }}
-        />
-        <img
-          src={imgGroup39576}
-          alt=""
-          aria-hidden="true"
+        >
+          <img
+            src={imgGroup112}
+            alt=""
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              left: 0,
+              bottom: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              objectPosition: 'bottom left',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              left: '-4%',
+              bottom: 0,
+              width: '100%',
+              height: '100%',
+              transform: 'rotate(-19.06deg)',
+              transformOrigin: 'bottom center',
+            }}
+          >
+            <img
+              src={imgGroup39574}
+              alt=""
+              aria-hidden="true"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                objectPosition: 'bottom left',
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Right Corner Leaf Cluster (Flipped) */}
+        <div
           style={{
             position: 'absolute',
-            right: -6,
+            right: '-12%',
             bottom: 0,
-            width: '24%',
-            height: 'auto',
-            transform: 'scaleX(-1) rotate(-3.45deg)',
+            width: '32%',
+            aspectRatio: '382 / 336',
+            transform: 'scaleX(-1)',
+            transformOrigin: 'center',
             pointerEvents: 'none',
           }}
-        />
+        >
+          <img
+            src={imgGroup112}
+            alt=""
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              left: 0,
+              bottom: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              objectPosition: 'bottom left',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              left: '-4%',
+              bottom: 0,
+              width: '100%',
+              height: '100%',
+              transform: 'rotate(-19.06deg)',
+              transformOrigin: 'bottom center',
+            }}
+          >
+            <img
+              src={imgGroup39574}
+              alt=""
+              aria-hidden="true"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                objectPosition: 'bottom left',
+              }}
+            />
+          </div>
+        </div>
 
         {/* Price tag */}
         <div
@@ -144,6 +219,7 @@ function MerchMobile({ isFlipped, onFlip }) {
             aspectRatio: '1',
             transform: 'rotate(-15deg)',
             pointerEvents: 'none',
+            zIndex: 2,
           }}
         >
           <img
@@ -237,7 +313,6 @@ export default function Merch() {
     <div
       style={{
         background: '#efd4a3',
-        minHeight: '100vh',
         width: '100%',
         overflowX: 'hidden',
         paddingTop: 'clamp(64px, 9vh, 85px)',
@@ -284,6 +359,104 @@ export default function Merch() {
               pointerEvents: 'none',
             }}
           />
+
+          {/* ── Left Corner Leaf ── */}
+          <div
+            style={{
+              position: 'absolute',
+              left: -145,
+              bottom: 725,
+              width: 382,
+              height: 336,
+              pointerEvents: 'none',
+            }}
+          >
+            <img
+              src={imgGroup112}
+              alt=""
+              style={{
+                position: 'absolute',
+                left: 0,
+                bottom: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                objectPosition: 'bottom left',
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                left: -15,
+                bottom: 0,
+                width: '100%',
+                height: '100%',
+                transform: 'rotate(-19.06deg)',
+                transformOrigin: 'bottom center',
+              }}
+            >
+              <img
+                src={imgGroup39574}
+                alt=""
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  objectPosition: 'bottom left',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* ── Right Corner Leaf (Flipped Left Leaf) ── */}
+          <div
+            style={{
+              position: 'absolute',
+              right: -145,
+              bottom: 725,
+              width: 382,
+              height: 336,
+              transform: 'scaleX(-1)',
+              transformOrigin: 'center',
+              pointerEvents: 'none',
+            }}
+          >
+            <img
+              src={imgGroup112}
+              alt=""
+              style={{
+                position: 'absolute',
+                left: 0,
+                bottom: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                objectPosition: 'bottom left',
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                left: -15,
+                bottom: 0,
+                width: '100%',
+                height: '100%',
+                transform: 'rotate(-19.06deg)',
+                transformOrigin: 'bottom center',
+              }}
+            >
+              <img
+                src={imgGroup39574}
+                alt=""
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  objectPosition: 'bottom left',
+                }}
+              />
+            </div>
+          </div>
 
           {/* ── OUR MERCH heading ── */}
           <h1
@@ -641,157 +814,6 @@ export default function Merch() {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* ── Plant: Group112 ── */}
-          <div
-            style={{
-              position: 'absolute',
-              top: `${(44.07 * H) / 100}px`,
-              right: `${(73.42 * W) / 100}px`,
-              bottom: `${(40 * H) / 100}px`,
-              left: 0,
-            }}
-          >
-            <img
-              src={imgGroup112}
-              alt=""
-              style={{
-                position: 'absolute',
-                inset: 0,
-                maxWidth: 'none',
-                width: '100%',
-                height: '100%',
-              }}
-            />
-          </div>
-
-          {/* ── Plant: Group39574 ── */}
-          <div
-            style={{
-              position: 'absolute',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              top: `${(42.57 * H) / 100}px`,
-              right: `${(78.38 * W) / 100}px`,
-              bottom: `${(35 * H) / 100}px`,
-              left: `${(-11.11 * W) / 100}px`,
-            }}
-          >
-            <div
-              style={{
-                transform: 'rotate(-19.06deg)',
-                flexShrink: 0,
-              }}
-            >
-              <img
-                src={imgGroup39574}
-                alt=""
-                style={{
-                  display: 'block',
-                  maxWidth: 'none',
-                  width: '100%',
-                  height: '100%',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* ── Plant: Group39575 ── */}
-          <div
-            style={{
-              position: 'absolute',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              top: `${(45.7 * H) / 100}px`,
-              right: `${(0.78 * W) / 100}px`,
-              bottom: `${(40 * H) / 100}px`,
-              left: `${(74.1 * W) / 100}px`,
-            }}
-          >
-            <div
-              style={{
-                transform: 'rotate(3.45deg)',
-                flexShrink: 0,
-              }}
-            >
-              <img
-                src={imgGroup39575}
-                alt=""
-                style={{
-                  display: 'block',
-                  maxWidth: 'none',
-                  width: '100%',
-                  height: '100%',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* ── Plant: Group39576 ── */}
-          <div
-            style={{
-              position: 'absolute',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              top: `${(46.82 * H) / 100}px`,
-              right: `${(2.38 * W) / 100}px`,
-              bottom: `${(40 * H) / 100}px`,
-              left: `${(72.5 * W) / 100}px`,
-            }}
-          >
-            <div
-              style={{
-                transform: 'scaleX(-1) rotate(-3.45deg)',
-                flexShrink: 0,
-              }}
-            >
-              <img
-                src={imgGroup39576}
-                alt=""
-                style={{
-                  display: 'block',
-                  maxWidth: 'none',
-                  width: '100%',
-                  height: '100%',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* ── Plant: Group39577 ── */}
-          <div
-            style={{
-              position: 'absolute',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              top: `${(45.42 * H) / 100}px`,
-              right: `${(-1.26 * W) / 100}px`,
-              bottom: `${(40 * H) / 100}px`,
-              left: `${(75.14 * W) / 100}px`,
-            }}
-          >
-            <div
-              style={{
-                transform: 'scaleX(-1) rotate(6.49deg)',
-                flexShrink: 0,
-              }}
-            >
-              <img
-                src={imgGroup39577}
-                alt=""
-                style={{
-                  display: 'block',
-                  maxWidth: 'none',
-                  width: '100%',
-                  height: '100%',
-                }}
-              />
             </div>
           </div>
 
