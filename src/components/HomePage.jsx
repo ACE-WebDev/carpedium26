@@ -5,7 +5,7 @@ import Image from "next/image";
 import Navbar from "./navbar";
 import MazeBall from "./MazeBall";
 import BallFall from "./BallFall";
-import BallPin, { navbarBottom, pageTop, pinOf, setPin } from "./BallPin";
+import BallPin, { pageTop, pinOf, pinViewport, setPin } from "./BallPin";
 import SlopeBall from "./SlopeBall";
 import CircleWipe from "./CircleWipe";
 import { createGlide } from "./scrollGlide";
@@ -276,13 +276,12 @@ function FlagshipPlatform() {
 }
 
 /* ================= PERFORMER FAN =================
-   Desktop (mouse): 3 cards fan out on hover.
-   Mobile (touch):  the stack fans out into 3 cards automatically,
-                    3 seconds after it scrolls into view. */
+   Desktop: cards fan out on hover.
+   Touch: reveal the fan shortly after it scrolls into view. */
 const FAN_IMAGES = {
-  left: "/performer-1.png",   // swap in different photos if you have them
-  center: "/performer-1.png",
-  right: "/performer-1.png",
+  left: "/performer-2.jpeg",
+  center: "/performer-1.jpeg",
+  right: "/performer-3.jpeg",
 };
 
 const MOBILE_DELAY_MS = 1000;
@@ -292,8 +291,6 @@ function PerformerFan({ images = FAN_IMAGES }) {
   const [isTouch, setIsTouch] = useState(false);
   const ref = useRef(null);
 
-  // Phone-sized screens OR devices with no real hover (so it also works in a
-  // resized desktop browser window, not only in touch emulation)
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px), (hover: none)");
     const update = () => setIsTouch(mq.matches);
@@ -302,7 +299,6 @@ function PerformerFan({ images = FAN_IMAGES }) {
     return () => mq.removeEventListener("change", update);
   }, []);
 
-  // Touch only: open 3s after the fan is on screen, close again when it leaves
   useEffect(() => {
     if (!isTouch) return;
     const el = ref.current;
@@ -328,62 +324,55 @@ function PerformerFan({ images = FAN_IMAGES }) {
     };
   }, [isTouch]);
 
-  // Phones: fanned out at full size, spread so the side cards stay on
-  // screen (a 64vw card spread 26% each way spans just under 100vw).
-  const spread = isTouch ? 26 : 55;
-  const rot = isTouch ? 10 : 20;
-  const ease = "transform 500ms cubic-bezier(0.22, 1, 0.36, 1)";
+  const spread = isTouch ? 26 : 65;
+  const rotation = isTouch ? 10 : 20;
+  const imageSizes = "(max-width: 500px) 48vw, (max-width: 767px) 240px, (hover: none) 240px, (max-width: 1600px) 32vw, 520px";
   const cardClass =
-    "absolute inset-0 h-full w-full object-cover pointer-events-none select-none motion-reduce:!transition-none";
+    "rounded-xl md:rounded-2xl object-cover shadow-lg pointer-events-none select-none motion-reduce:!transition-none";
 
   return (
     <div
-        ref={ref}
-        className="relative z-10 cursor-pointer"
-        style={{
-          width: isTouch ? "min(64vw, 300px)" : "min(40vw, 640px)",
-          aspectRatio: "512 / 718",
-        }}
-        onMouseEnter={() => !isTouch && setOpen(true)}
-        onMouseLeave={() => !isTouch && setOpen(false)}
-      >
-      {/* Left card */}
+      ref={ref}
+      className="relative z-10 cursor-pointer"
+      style={{
+        width: isTouch ? "min(48vw, 240px)" : "min(32vw, 520px)",
+        aspectRatio: "3 / 2",
+      }}
+      onMouseEnter={() => !isTouch && setOpen(true)}
+      onMouseLeave={() => !isTouch && setOpen(false)}
+    >
       <Image
         src={images.left}
-        alt=""
-        width={2000}
-        height={2000}
+        alt="Carpediem performer"
+        fill
+        sizes={imageSizes}
         className={`${cardClass} z-0`}
         style={{
-          transition: ease,
+          transition: "transform 500ms cubic-bezier(0.22, 1, 0.36, 1)",
           transform: open
-            ? `translateX(-${spread}%) translateY(3%) rotate(-${rot}deg)`
+            ? `translateX(-${spread}%) translateY(3%) rotate(-${rotation}deg)`
             : "translateX(0) translateY(0) rotate(0deg)",
         }}
       />
-
-      {/* Right card */}
       <Image
         src={images.right}
-        alt=""
-        width={2000}
-        height={2000}
+        alt="Carpediem performer"
+        fill
+        sizes={imageSizes}
         className={`${cardClass} z-0`}
         style={{
-          transition: ease,
+          transition: "transform 500ms cubic-bezier(0.22, 1, 0.36, 1)",
           transform: open
-            ? `translateX(${spread}%) translateY(3%) rotate(${rot}deg)`
+            ? `translateX(${spread}%) translateY(3%) rotate(${rotation}deg)`
             : "translateX(0) translateY(0) rotate(0deg)",
         }}
       />
-
-      {/* Center card (always on top) */}
       <Image
         src={images.center}
-        alt="Performer"
-        width={2000}
-        height={2000}
-        className={`${cardClass} z-10 `}
+        alt="Carpediem performer"
+        fill
+        sizes={imageSizes}
+        className={`${cardClass} z-10`}
       />
     </div>
   );
@@ -818,9 +807,10 @@ function MazeRun({
     let hold = 0;
     let moving = 0;
     let runEnd = null;
+    let viewport = null;
     const pace = () => {
-      const vh = window.innerHeight;
-      const navBottom = navbarBottom();
+      viewport = pinViewport(pin);
+      const { height: vh, navBottom } = viewport;
       const boxTop = box.getBoundingClientRect().top;
       const scene = pin ? pin.sticky.getBoundingClientRect() : { top: boxTop, height: 0 };
       offset = boxTop - scene.top;
@@ -887,7 +877,10 @@ function MazeRun({
     const glide = createGlide(progress, draw);
     const repace = () => {
       pace();
-      glide.jump();
+      glide.update();
+    };
+    const onResize = () => {
+      if (pinViewport(pin) !== viewport) repace();
     };
     repaceRef.current = repace;
     repace();
@@ -895,10 +888,10 @@ function MazeRun({
     pageObserver.observe(document.body);
     window.addEventListener("sponsorlanes:layout", repace);
     window.addEventListener("scroll", glide.update, { passive: true });
-    window.addEventListener("resize", repace);
+    window.addEventListener("resize", onResize);
     return () => {
       window.removeEventListener("scroll", glide.update);
-      window.removeEventListener("resize", repace);
+      window.removeEventListener("resize", onResize);
       pageObserver.disconnect();
       window.removeEventListener("sponsorlanes:layout", repace);
       glide.stop();
@@ -1373,7 +1366,7 @@ export default function HomePage() {
           EDITION
         </h2>
 
-        <div className="relative z-10 w-full flex items-center justify-center mt-5 md:-mt-16">
+        <div className="relative z-10 w-full flex items-center justify-center mt-5 md:mt-8 py-[5vw] md:py-[min(5vw,80px)]">
           <div
             className="absolute left-1/2 -translate-x-1/2 w-screen flex flex-col gap-[7.5vw] md:gap-[clamp(24px,3vw,90px)]"
           >
@@ -1399,20 +1392,18 @@ export default function HomePage() {
         </div>
 
         <p
-          className="relative z-10 max-w-[360px] md:max-w-[1000px] mt-5 md:-mt-16 text-[15px] leading-[1.4] md:text-[clamp(1rem,2vw,36px)] md:leading-[1.4]"
+          className="relative z-10 max-w-[360px] md:max-w-[1000px] mt-5 md:mt-8 text-[15px] leading-[1.4] md:text-[clamp(1rem,2vw,36px)] md:leading-[1.4]"
           style={{
             fontFamily: "'Bricolage Grotesque', sans-serif",
             fontWeight: 400,
             color: "#000000",
           }}
         >
-          The 25th Edition of Carpe Diem is here, flowing back with boundless
-          energy and spirit! This year, with the theme Pravaah – The Flow of
-          Expressions, we celebrate the rhythm of creativity, the pulse of
-          talent, and the stream of unforgettable moments.
+          Carpediem is SASTRA University’s flagship cultural fest, a celebration where creativity knows no boundaries and every corner of campus comes alive with colour, rhythm, stories, and imagination. It brings together a kaleidoscope of talents and experiences, leaving behind moments that linger long after the fest is over.
+
           <span className="md:hidden">
-            {" "}From fiery beats to graceful moves, Carpe Diem promises to be a
-            vibrant celebration of expression.
+            {" "}This year, Carpediem unfolds as Aranya - Enter the Unexplored, woven around curiosity, imagination, and the magic of the unknown. Like wandering into a forest where every turn reveals a little wonder, with unexpected encounters, wild ideas, and stories waiting to be discovered. Every performance, creation, and experience adding a new thread to the tale, Carpediem becomes a little world of its own where imagination runs wild and every corner holds a new adventure.
+3
           </span>
         </p>
       </section>
@@ -1429,7 +1420,7 @@ export default function HomePage() {
         className="relative z-20 w-full pt-5 md:pt-8 px-6 text-center"
       >
         <div
-          className="absolute right-[-10%] top-[10%] w-[34%] pointer-events-none select-none z-0"
+          className="absolute right-[-10%] top-[10%] w-[4%] pointer-events-none select-none z-0"
           aria-hidden="true"
         >
           <Image
@@ -1545,7 +1536,7 @@ export default function HomePage() {
           screen while its balls run. */}
       <div
         className={`relative z-10 w-full overflow-x-clip ${
-          startAt === "sponsors" ? "pt-[calc(9vh_+_64px)]" : "pt-[15%]"
+          startAt === "sponsors" ? "pt-[calc(9svh_+_64px)]" : "pt-[15%]"
         }`}
       >
         {/* All three lanes and the exit maze share one pin. No lane can

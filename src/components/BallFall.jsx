@@ -13,7 +13,7 @@ import {
   withRollIn,
 } from "./mazeBallTimeline";
 import { createGlide } from "./scrollGlide";
-import { navbarBottom, pageTop, pinOf, setPin } from "./BallPin";
+import { pageTop, pinOf, pinViewport, setPin } from "./BallPin";
 
 /*
  * A ball falling through the maze: a physics simulation (mazeBallPhysics.js)
@@ -81,8 +81,8 @@ function scrollRangeBelow({
   sceneOffset,
   earliestTop,
   lines,
+  vh = window.innerHeight,
 }) {
-  const vh = window.innerHeight;
   // A scene that fits on screen under the navbar is held there, centred,
   // for its whole fall. Either way the fall begins no earlier than
   // `earliestTop` allows: where the root is when the page is scrolled as
@@ -388,6 +388,7 @@ export default function BallFall({ variant }) {
     // with its last leg aimed at the landing art as it currently sits, and
     // how scroll is paced onto it for this viewport.
     let geometry = null;
+    let viewport = null;
     // The landing art's pixels, and which image they were read from.
     let art = null;
     let artSrc = "";
@@ -460,8 +461,8 @@ export default function BallFall({ variant }) {
       // fall begins. Its scene is then held there for the first `hold` px
       // of scrolling, where it can be, and moves on with the page for the
       // rest of `span`, until the ball touches down.
-      const vh = window.innerHeight;
-      const navBottom = navbarBottom();
+      viewport = pinViewport(pin);
+      const { height: vh, navBottom } = viewport;
       const clearance = navBottom + config.scroll.navbarMargin;
       const holds =
         MODE === "scroll" &&
@@ -486,6 +487,7 @@ export default function BallFall({ variant }) {
         : NaN;
       const notBefore = Number.isFinite(runEnd) ? runEnd + vh * AFTER_GAP : 0;
       const range = setup.scrollRange({
+        vh,
         rootBox,
         startY,
         targetY: endY,
@@ -775,7 +777,10 @@ export default function BallFall({ variant }) {
     }, 250);
 
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", relayout);
+    const onResize = () => {
+      if (pinViewport(pin) !== viewport) relayout();
+    };
+    window.addEventListener("resize", onResize);
     // What plays before it has been re-paced: when this may start moves.
     if (setup.after) window.addEventListener("ballrun:paced", relayout);
     const observer = new ResizeObserver(relayout);
@@ -788,7 +793,7 @@ export default function BallFall({ variant }) {
       glide.stop();
       if (autoFrame) cancelAnimationFrame(autoFrame);
       window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", relayout);
+      window.removeEventListener("resize", onResize);
       window.removeEventListener("ballrun:paced", relayout);
       observer.disconnect();
     };
