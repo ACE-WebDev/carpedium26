@@ -14,7 +14,7 @@ export default function Footer() {
       id="contact"
       className="relative w-full bg-[#EDD4A3] px-6 md:px-20 py-12 md:py-16 flex flex-col justify-between scroll-mt-16"
     >
-      <div>
+      <div className="md:text-center">
         {/* Contact us: DELIRIUM NVC, Weight 400, 71.19px on desktop */}
         <h2
           className="uppercase mb-6 md:mb-8 text-[#283618]"
@@ -43,11 +43,13 @@ export default function Footer() {
           Core Committee
         </h3>
 
-        {/* Contacts: one column on the narrowest phones, up to four on wide
-            screens, with the text sized to fit the column it is in. */}
-        <div className="grid grid-cols-1 min-[375px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-y-8 md:gap-y-12 gap-x-4 md:gap-x-16 mb-16 md:mb-24">
+        {/* Contacts: keep the phone layout; center three above two on desktop. */}
+        <div className="grid grid-cols-1 min-[375px]:grid-cols-2 md:grid-cols-6 gap-y-8 md:gap-y-12 gap-x-4 md:gap-x-16 mb-16 md:mb-24">
           {committeeMembers.map((member, index) => (
-            <div key={index} className="flex flex-col gap-2">
+            <div
+              key={index}
+              className={`flex flex-col gap-2 md:col-span-2 md:items-center ${index === 3 ? "md:col-start-2" : ""}`}
+            >
               {/* Sudarsan P: Product Sans Medium, Weight 500, 27.97px on desktop, Color #602D00 */}
               <span
                 style={{

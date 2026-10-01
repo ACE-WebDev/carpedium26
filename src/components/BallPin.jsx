@@ -41,6 +41,30 @@ export function setPin(pin, top, hold) {
   pin.spacer.style.height = hold > 0 ? `${hold}px` : "";
 }
 
+const sceneViewports = new WeakMap();
+
+/* Mobile browser chrome changes innerHeight during a swipe. All sponsor
+   animations must use the same viewport until the width/orientation changes,
+   otherwise their spacer and progress change underneath that swipe. */
+export function pinViewport(pin) {
+  const stable = pin?.sticky.hasAttribute("data-sponsor-lanes") &&
+    window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+  const width = window.innerWidth;
+  const orientation = window.screen.orientation?.type;
+  const previous = stable && sceneViewports.get(pin.sticky);
+  if (previous && previous.width === width && previous.orientation === orientation) {
+    return previous;
+  }
+  const viewport = {
+    width,
+    height: window.innerHeight,
+    navBottom: navbarBottom(),
+    orientation,
+  };
+  if (stable) sceneViewports.set(pin.sticky, viewport);
+  return viewport;
+}
+
 /* Where `el`'s top is on screen when the page is scrolled right to the top.
    Measured against the body rather than with scrollY, which reads 0 while a
    blackout has the body pinned. */
