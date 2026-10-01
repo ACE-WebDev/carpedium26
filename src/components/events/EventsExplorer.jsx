@@ -7,6 +7,7 @@ import EventCards, { formatTime } from './EventCards';
 export default function EventsExplorer({ initialEvents = [] }) {
   const [eventsList, setEventsList] = useState(initialEvents);
   const [query, setQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
 
   // Sync state if initialEvents updates from server
   useEffect(() => {
@@ -26,25 +27,42 @@ export default function EventsExplorer({ initialEvents = [] }) {
     });
   };
 
-  // Real-time filtering matching against event Name, Venue, or Time
+  // Real-time filtering matching against Category, Name, Venue, or Time
   const filteredEvents = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return eventsList;
+    const cat = selectedCategory.trim().toLowerCase();
 
     return eventsList.filter((ev) => {
-      const name = (ev.Name || '').toLowerCase();
-      const venue = (ev.Venue || '').toLowerCase();
-      const rawTime = (ev.Time || '').toLowerCase();
-      const formatted = formatTime(ev.Time).toLowerCase();
+      // Category filter match
+      if (cat) {
+        const evCat = (ev.category || '').toLowerCase();
+        const matchesCategory =
+          evCat === cat ||
+          evCat.split(/[\s,]+/).some((c) => c.trim() === cat) ||
+          evCat.includes(cat);
+        if (!matchesCategory) return false;
+      }
 
-      return (
-        name.includes(q) ||
-        venue.includes(q) ||
-        rawTime.includes(q) ||
-        formatted.includes(q)
-      );
+      // Text search query match
+      if (q) {
+        const name = (ev.Name || '').toLowerCase();
+        const venue = (ev.Venue || '').toLowerCase();
+        const rawTime = (ev.Time || '').toLowerCase();
+        const formatted = formatTime(ev.Time).toLowerCase();
+        const evCat = (ev.category || '').toLowerCase();
+
+        return (
+          name.includes(q) ||
+          venue.includes(q) ||
+          rawTime.includes(q) ||
+          formatted.includes(q) ||
+          evCat.includes(q)
+        );
+      }
+
+      return true;
     });
-  }, [eventsList, query]);
+  }, [eventsList, query, selectedCategory]);
 
   return (
     <>
@@ -54,6 +72,8 @@ export default function EventsExplorer({ initialEvents = [] }) {
           query={query}
           onQueryChange={setQuery}
           onShuffle={handleShuffle}
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
         />
       </div>
 
@@ -77,7 +97,10 @@ export default function EventsExplorer({ initialEvents = [] }) {
       </div>
 
       {/* ── Dynamically Filtered Event Cards ── */}
-      <EventCards events={filteredEvents} isSearching={Boolean(query.trim())} />
+      <EventCards
+        events={filteredEvents}
+        isSearching={Boolean(query.trim() || selectedCategory)}
+      />
     </>
   );
 }

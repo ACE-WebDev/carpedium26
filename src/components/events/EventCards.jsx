@@ -148,6 +148,39 @@ const styles = `
     margin: 0;
   }
 
+  /* ── Register button inside overlay ─────────────────────────────────── */
+  .ec-register-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    align-self: flex-start;
+    margin-top: clamp(4px, 0.6vw, 8px);
+    padding: clamp(4px, 0.5vw, 6px) clamp(10px, 1vw, 14px);
+    border-radius: 9999px;
+    background: #EFD4A3;
+    color: #1a1208;
+    font-family: "Lexend Deca", sans-serif;
+    font-weight: 700;
+    font-size: clamp(10px, 0.85vw, 12px);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-decoration: none;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+    user-select: none;
+  }
+  .ec-register-btn:hover {
+    background: #ffffff;
+    color: #000000;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(239, 212, 163, 0.45);
+  }
+  .ec-register-btn:active {
+    transform: translateY(0);
+  }
+
   /* ── Placeholder (no image) ──────────────────────────────────────────── */
   .ec-placeholder {
     width: 100%;
@@ -182,10 +215,19 @@ function resolveImageUrl(url) {
   return clean;
 }
 
+function formatLink(url) {
+  if (!url) return '';
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
 /* ── EventCard ───────────────────────────────────────────────────────────── */
 function EventCard({ event }) {
-  const { Name, Venue, Time, img_url } = event;
+  const { Name, Venue, Time, img_url, gform_link } = event;
   const posterSrc = resolveImageUrl(img_url);
+  const registerUrl = formatLink(gform_link);
 
   return (
     <div className="ec-card">
@@ -219,6 +261,30 @@ function EventCard({ event }) {
         <p className="ec-name">{Name || '—'}</p>
         {Venue && <p className="ec-meta">📍 {Venue}</p>}
         {Time  && <p className="ec-meta">🕐 {formatTime(Time)}</p>}
+        {registerUrl && (
+          <a
+            href={registerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ec-register-btn"
+            onClick={(e) => e.stopPropagation()}
+          >
+            Register
+            <svg
+              width="11"
+              height="11"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M7 17L17 7M17 7H7M17 7V17" />
+            </svg>
+          </a>
+        )}
       </div>
 
     </div>
@@ -298,7 +364,7 @@ export default function EventCards({ events = [], isSearching = false }) {
             padding: '48px 0',
             letterSpacing: '0.04em',
           }}>
-            {isSearching ? 'No events found matching your search.' : 'No events found. Add rows in Supabase to see them here.'}
+            {isSearching ? 'No events found matching your search.' : 'No events found'}
           </p>
         ) : (
           <div className="ec-grid" role="list" aria-label="Event cards">
