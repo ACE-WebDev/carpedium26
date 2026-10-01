@@ -988,74 +988,6 @@ function SponsorLaneSpacing({ lanesRef, runRef, gapRef }) {
   return null;
 }
 
-const IDLE_MS = 1000;
-
-function ScrollHint() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    let timer;
-
-    const startTimer = () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => setVisible(true), IDLE_MS);
-    };
-
-    const onActivity = () => {
-      setVisible(false); // hide as soon as the user scrolls
-      startTimer();      // and wait for 3s of stillness before showing again
-    };
-
-    startTimer(); // initial 3s wait after page load
-
-    window.addEventListener("scroll", onActivity, { passive: true });
-    window.addEventListener("wheel", onActivity, { passive: true });
-    window.addEventListener("touchmove", onActivity, { passive: true });
-    window.addEventListener("keydown", onActivity);
-
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("scroll", onActivity);
-      window.removeEventListener("wheel", onActivity);
-      window.removeEventListener("touchmove", onActivity);
-      window.removeEventListener("keydown", onActivity);
-    };
-  }, []);
-
-  // Kept at the bottom of the screen, not of the hero: on a phone the hero
-  // is only as tall as the maze, and in scroll mode it holds still while the
-  // ball falls, so there is nothing to scroll "to" — it scrolls a screen on.
-  return (
-    <button
-      onClick={() =>
-        window.scrollBy({ top: window.innerHeight * 0.8, behavior: "smooth" })
-      }
-      aria-hidden={!visible}
-      tabIndex={visible ? 0 : -1}
-      className={`fixed bottom-[max(2.5rem,env(safe-area-inset-bottom))] left-1/2 z-40 flex -translate-x-1/2 cursor-pointer flex-col items-center gap-3 transition-opacity duration-500 ${
-        visible ? "opacity-100" : "opacity-0 pointer-events-none"
-      }`}
-    >
-      <span className="grid h-16 w-16 place-items-center rounded-full bg-[#171C2E] border-[3px] border-[#505763]">
-        <svg
-          className="h-6 w-6"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="#FDF7DE"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M12 5v14M5 12l7 7 7-7" />
-        </svg>
-      </span>
-      <span className="font-['Archivo_Black'] text-lg font-bold uppercase tracking-wider text-[#1C1E2C]">
-        SCROLL DOWN
-      </span>
-    </button>
-  );
-}
-
 /* ================= BAR DROP =================
    Ball rolls in the corridor between two bars (data-bar="a" above, "b" below),
    leaves the right edge, and falls as a horizontal projectile onto the image
@@ -1260,13 +1192,7 @@ export default function HomePage() {
       {startAt === "hero" && (
         <>
       {/* Hero Section */}
-      <MazeBall
-        hero={
-        <section className="relative h-full w-full">
-          <ScrollHint />
-        </section>
-        }
-      >
+      <MazeBall>
         {/* About Us Section — inside MazeBall so the ball can roll from the
             hero down into it; `data-ball-target` marks where it comes to rest. */}
         <section id="about-us" className="relative w-full flex items-center justify-center pt-10 pb-8 md:py-24">

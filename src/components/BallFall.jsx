@@ -154,7 +154,8 @@ const VARIANTS = {
     // Once the opening sequence has handed over to the page.
     autoReady: () => document.body.classList.contains("opening-done"),
     autoStartDelay: 0,
-    autoThenScrollMs: 5000,
+    mode: "auto",
+    autoPlayMs: 4000, // Then scroll input moves the ball, with the page still locked.
     announce: true,
   },
 
@@ -370,14 +371,18 @@ export default function BallFall({ variant }) {
 
   useEffect(() => {
     const setup = VARIANTS[variant];
+    const mode = setup?.mode ?? MODE;
+    const scrollDriven = mode === "scroll";
+    const isHeroAuto = variant === "hero" && mode === "auto";
     const svg = svgRef.current;
     const shrink = shrinkRef.current;
     const ball = ballRef.current;
     const root = svg?.parentElement;
     if (!setup || !svg || !shrink || !ball || !root) return;
+    svg.dataset.ballMode = mode;
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (setup.autoThenScrollMs && !reduced.matches) {
+    if (isHeroAuto && !reduced.matches) {
       ball.style.visibility = "hidden";
     }
     if (setup.vanishMs && !reduced.matches) {
@@ -394,9 +399,157 @@ export default function BallFall({ variant }) {
     // how scroll is paced onto it for this viewport.
     let geometry = null;
     let viewport = null;
+    let fallFinished = false;
+    let startedAt = null;
+    let releaseHeroScroll = null;
+    let lockedPageY = 0;
+    let heroScroll = false;
+    let heroTargetProgress = 0;
+    let heroShownProgress = 0;
+    let touchY = null;
     // The landing art's pixels, and which image they were read from.
     let art = null;
     let artSrc = "";
+
+    const shouldLockHeroScroll = () =>
+      isHeroAuto &&
+      !reduced.matches &&
+      !fallFinished &&
+      document.body.classList.contains("opening-done");
+
+    const advanceHero = (pixels) => {
+      if (!heroScroll || !geometry || fallFinished) return;
+      const pixelsPerSecond = Math.max(0.1, config.scroll.screensPerSecond || 0.4) *
+        pinViewport(pin).height;
+      const totalPixels = Math.max(1, geometry.touchIndex * geometry.timeline.dt * pixelsPerSecond);
+      heroTargetProgress = Math.min(1, Math.max(0, heroTargetProgress + pixels / totalPixels));
+      heroGlide.update();
+    };
+
+    const onHeroWheel = (event) => {
+      if (!shouldLockHeroScroll()) return;
+      event.preventDefault();
+      const unit = event.deltaMode === 1 ? 40 : event.deltaMode === 2 ? window.innerHeight : 1;
+      advanceHero(event.deltaY * unit);
+    };
+    const onHeroTouchStart = (event) => {
+      touchY = event.touches.length === 1 ? event.touches[0].clientY : null;
+    };
+    const onHeroTouchMove = (event) => {
+      if (!shouldLockHeroScroll()) return;
+      event.preventDefault();
+      if (touchY === null || event.touches.length !== 1) return;
+      const y = event.touches[0].clientY;
+      advanceHero(touchY - y);
+      touchY = y;
+    };
+    const onHeroTouchEnd = () => {
+      touchY = null;
+    };
+    const preventKeyScroll = (event) => {
+      const target = event.target;
+      const isEditing =
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
+      if (
+        shouldLockHeroScroll() &&
+        !isEditing &&
+        ["ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight", "PageDown", "PageUp", "Home", "End", " ", "Spacebar"].includes(event.key)
+      ) {
+        event.preventDefault();
+        if (!heroScroll) return;
+        if (event.key === "Home" || event.key === "End") {
+          heroTargetProgress = event.key === "Home" ? 0 : 1;
+          heroGlide.update();
+        } else {
+          const backwards = ["ArrowUp", "ArrowLeft", "PageUp"].includes(event.key) ||
+            ([" ", "Spacebar"].includes(event.key) && event.shiftKey);
+          const distance = event.key.startsWith("Arrow") ? 100 : window.innerHeight * 0.8;
+          advanceHero(backwards ? -distance : distance);
+        }
+      }
+    };
+
+    // Camera follow moves the fixed body's top. Native scrolling must stay
+    // at zero, including scrolls caused by focus or an existing smooth scroll.
+    const keepPageLocked = () => {
+      if (!releaseHeroScroll || !shouldLockHeroScroll()) return;
+      if (window.scrollX || window.scrollY) {
+        window.scrollTo({ left: 0, top: 0, behavior: "instant" });
+      }
+      if (document.body.scrollTop) document.body.scrollTop = 0;
+    };
+
+    const lockHeroScroll = () => {
+      if (
+        !shouldLockHeroScroll() ||
+        releaseHeroScroll
+      ) return;
+
+      const html = document.documentElement;
+      const body = document.body;
+      const previous = {
+        position: body.style.position,
+        top: body.style.top,
+        left: body.style.left,
+        right: body.style.right,
+        overflowY: body.style.overflowY,
+        htmlOverflowY: html.style.overflowY,
+        scrollbarGutter: html.style.scrollbarGutter,
+        touchAction: body.style.touchAction,
+        htmlTouchAction: html.style.touchAction,
+        overscrollBehavior: html.style.overscrollBehavior,
+      };
+      lockedPageY = window.scrollY;
+      body.style.position = "fixed";
+      body.style.top = `-${lockedPageY}px`;
+      body.style.left = "0";
+      body.style.right = "0";
+      body.style.overflowY = "hidden";
+      html.style.overflowY = "hidden";
+      html.style.scrollbarGutter = "stable";
+      html.style.overscrollBehavior = "none";
+      body.style.touchAction = "none";
+      html.style.touchAction = "none";
+      window.addEventListener("wheel", onHeroWheel, { capture: true, passive: false });
+      window.addEventListener("touchstart", onHeroTouchStart, { capture: true, passive: true });
+      window.addEventListener("touchmove", onHeroTouchMove, { capture: true, passive: false });
+      window.addEventListener("touchend", onHeroTouchEnd, true);
+      window.addEventListener("touchcancel", onHeroTouchEnd, true);
+      window.addEventListener("keydown", preventKeyScroll, true);
+      window.addEventListener("scroll", keepPageLocked, true);
+      releaseHeroScroll = () => {
+        Object.assign(body.style, {
+          position: previous.position,
+          top: previous.top,
+          left: previous.left,
+          right: previous.right,
+          overflowY: previous.overflowY,
+          touchAction: previous.touchAction,
+        });
+        html.style.overflowY = previous.htmlOverflowY;
+        html.style.scrollbarGutter = previous.scrollbarGutter;
+        html.style.overscrollBehavior = previous.overscrollBehavior;
+        html.style.touchAction = previous.htmlTouchAction;
+        window.removeEventListener("wheel", onHeroWheel, true);
+        window.removeEventListener("touchstart", onHeroTouchStart, true);
+        window.removeEventListener("touchmove", onHeroTouchMove, true);
+        window.removeEventListener("touchend", onHeroTouchEnd, true);
+        window.removeEventListener("touchcancel", onHeroTouchEnd, true);
+        window.removeEventListener("keydown", preventKeyScroll, true);
+        window.removeEventListener("scroll", keepPageLocked, true);
+        window.scrollTo({ top: lockedPageY, behavior: "instant" });
+        releaseHeroScroll = null;
+      };
+    };
+
+    const openingObserver = variant === "hero" ? new MutationObserver(lockHeroScroll) : null;
+    openingObserver?.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    lockHeroScroll();
 
     const layout = () => {
       const maze = root.querySelector("[data-ball-maze]");
@@ -470,7 +623,7 @@ export default function BallFall({ variant }) {
       const { height: vh, navBottom } = viewport;
       const clearance = navBottom + config.scroll.navbarMargin;
       const holds =
-        MODE === "scroll" &&
+        scrollDriven &&
         !!pin &&
         !setup.flowWithPage &&
         !reduced.matches &&
@@ -540,7 +693,7 @@ export default function BallFall({ variant }) {
       // Steered steadily down the screen, held from the start (`steer`), or
       // paced by buildWarp with the hold wherever it plays most evenly.
       const { warp, holdAt } =
-        MODE !== "scroll"
+        !scrollDriven
           ? { warp: null, holdAt: 0 }
           : setup.steer
             ? { warp: steeredWarp(timeline, pacing), holdAt: 0 }
@@ -604,29 +757,7 @@ export default function BallFall({ variant }) {
       const top = pin
         ? pin.track.getBoundingClientRect().top + sceneOffset
         : root.getBoundingClientRect().top;
-      const raw = Math.min(1, Math.max(0, (top0 - top) / span));
-      if (!heroHandoff) return raw;
-      const remaining = Math.max(0.000001, 1 - heroHandoff.fromRaw);
-      return Math.min(
-        1,
-        Math.max(
-          0,
-          heroHandoff.fromProgress +
-            ((raw - heroHandoff.fromRaw) * (1 - heroHandoff.fromProgress)) / remaining
-        )
-      );
-    };
-
-    let heroHandoff = null;
-    const progressAtIndex = (index) => {
-      let low = 0;
-      let high = 1;
-      for (let i = 0; i < 24; i++) {
-        const middle = (low + high) / 2;
-        if (indexAt(geometry.warp, middle) < index) low = middle;
-        else high = middle;
-      }
-      return (low + high) / 2;
+      return Math.min(1, Math.max(0, (top0 - top) / span));
     };
 
     // The moment the ball touches its landing art: announced once, with
@@ -637,6 +768,8 @@ export default function BallFall({ variant }) {
     let arrivedAt = null;
     const arrive = () => {
       arrivedAt = geometry.touchIndex;
+      fallFinished = true;
+      releaseHeroScroll?.();
       placeAt(arrivedAt);
       const box = ball.getBoundingClientRect();
       window.dispatchEvent(
@@ -654,7 +787,7 @@ export default function BallFall({ variant }) {
 
     // Glides toward the scroll position rather than snapping, so flicks and
     // trackpad jitter do not make the ball twitch.
-    const glide = createGlide(
+    const glide = scrollDriven ? createGlide(
       () => (geometry && arrivedAt === null ? scrollProgress() : null),
       (progress) => {
         const index = indexAt(geometry.warp, progress);
@@ -667,61 +800,85 @@ export default function BallFall({ variant }) {
         // Otherwise it rests on the art, and scrolling back up rewinds it.
         else placeAt(Math.min(index, geometry.touchIndex));
       }
-    );
+    ) : null;
 
     /* ------------------------------------------------------ auto mode */
 
     // Plays the fall in real time once its maze has appeared, scrolling the
     // page along to keep the ball on screen.
-    let startedAt = null;
     let startTimer = 0;
     let autoFrame = 0;
     let landed = false;
 
-    const autoIndex = (now) =>
-      startedAt === null
-        ? 0
-        : (((now - startedAt) / 1000) * config.auto.speed) / geometry.timeline.dt;
+    const autoIndex = (now) => {
+      if (startedAt === null) return 0;
+      // A resize or delayed frame cannot move the hero beyond the handoff.
+      const elapsed = isHeroAuto
+        ? Math.min(now - startedAt, setup.autoPlayMs)
+        : now - startedAt;
+      return ((elapsed / 1000) * config.auto.speed) / geometry.timeline.dt;
+    };
 
     // Keeps the ball on screen for the whole fall, whatever the visitor is
     // doing: whenever it has dropped below the follow line, the page is
     // scrolled down to bring it back up to it. It only ever scrolls down, so
     // scrolling on ahead yourself is never fought; scrolling back up while
     // the ball is still falling gets pulled back down to it.
-    const follow = () => {
+    const follow = (rewinding = false) => {
       if (!config.auto.followBall) return;
       const box = ball.getBoundingClientRect();
       const below =
         box.top + box.height / 2 - window.innerHeight * config.auto.followAt;
-      if (below > 0.5) window.scrollTo(0, window.scrollY + below);
+      if (below > 0.5 || (releaseHeroScroll && rewinding && below < -0.5)) {
+        if (releaseHeroScroll) {
+          lockedPageY = Math.max(0, lockedPageY + below);
+          document.body.style.top = `-${lockedPageY}px`;
+        } else {
+          window.scrollTo(0, window.scrollY + below);
+        }
+      }
     };
+
+    // The hero consumes scroll gestures while the document stays fixed.
+    // Other mazes continue using the actual page scroll through `glide`.
+    const heroGlide = createGlide(
+      () => heroScroll && geometry && !fallFinished ? heroTargetProgress : null,
+      (progress) => {
+        const rewinding = progress < heroShownProgress;
+        heroShownProgress = progress;
+        const index = progress * geometry.touchIndex;
+        placeAt(index);
+        follow(rewinding);
+        if (index >= geometry.touchIndex) arrive();
+      }
+    );
 
     const autoTick = (now) => {
       autoFrame = 0;
       if (!geometry || arrivedAt !== null || landed) return;
+      const handoff = isHeroAuto && now - startedAt >= setup.autoPlayMs;
       const index = autoIndex(now);
-      if (setup.autoThenScrollMs && now - startedAt >= setup.autoThenScrollMs) {
-        const { top0, span, sceneOffset } = geometry;
-        const top = pin
-          ? pin.track.getBoundingClientRect().top + sceneOffset
-          : root.getBoundingClientRect().top;
-        heroHandoff = {
-          fromRaw: Math.min(1, Math.max(0, (top0 - top) / span)),
-          fromProgress: progressAtIndex(index),
-        };
-        glide.jump();
-        return;
-      }
       if (index >= geometry.touchIndex) {
         if (setup.announce) arrive();
         else {
           landed = true;
+          fallFinished = true;
+          releaseHeroScroll?.();
           placeAt(geometry.touchIndex);
         }
         return;
       }
       placeAt(index);
       follow();
+      if (handoff) {
+        // Start scroll control at the exact final automatic frame. Keep the
+        // lock until arrival; the handoff changes input, not page position.
+        heroTargetProgress = heroShownProgress = index / geometry.touchIndex;
+        heroScroll = true;
+        svg.dataset.ballMode = "scroll";
+        heroGlide.jump();
+        return;
+      }
       autoFrame = requestAnimationFrame(autoTick);
     };
 
@@ -733,7 +890,10 @@ export default function BallFall({ variant }) {
       const scrolled = -document.body.getBoundingClientRect().top;
       if (scrolled < geometry.notBefore) return;
       startTimer = window.setTimeout(() => {
+        startTimer = 0;
         startedAt = performance.now();
+        glide?.stop();
+        lockHeroScroll();
         ball.style.visibility = "visible";
         autoFrame = requestAnimationFrame(autoTick);
       }, setup.autoStartDelay ?? config.auto.startDelay);
@@ -743,15 +903,11 @@ export default function BallFall({ variant }) {
 
     const onScroll = () => {
       if (reduced.matches) return; // the ball just rests at the end
-      if (MODE === "auto") {
+      if (mode === "auto") {
         maybeStartAuto();
         return;
       }
-      if (setup.autoThenScrollMs && !heroHandoff) {
-        maybeStartAuto();
-        return;
-      }
-      glide.update();
+      glide?.update();
     };
 
     // Re-measures, then puts the ball straight where it belongs rather than
@@ -766,13 +922,14 @@ export default function BallFall({ variant }) {
         placeAt(restIndex());
       } else if (landed) {
         placeAt(geometry.touchIndex);
-      } else if (MODE === "auto") {
+      } else if (heroScroll) {
+        placeAt(heroShownProgress * geometry.touchIndex);
+        follow();
+      } else if (mode === "auto") {
         placeAt(Math.min(autoIndex(performance.now()), geometry.touchIndex));
         maybeStartAuto();
-      } else if (setup.autoThenScrollMs && startedAt !== null && !heroHandoff) {
-        placeAt(Math.min(autoIndex(performance.now()), geometry.touchIndex));
       } else {
-        glide.jump();
+        glide?.jump();
       }
     };
 
@@ -810,7 +967,11 @@ export default function BallFall({ variant }) {
           relayout();
           requestAnimationFrame(retry);
         })
-        .catch((error) => console.error("Ball animation:", error));
+        .catch((error) => {
+          fallFinished = true;
+          releaseHeroScroll?.();
+          console.error("Ball animation:", error);
+        });
     }
 
     relayout();
@@ -822,7 +983,7 @@ export default function BallFall({ variant }) {
         lastHeight = height;
         relayout();
       }
-      if ((MODE === "auto" || setup.autoThenScrollMs) && !reduced.matches) {
+      if (mode === "auto" && !reduced.matches) {
         maybeStartAuto();
       }
     }, 250);
@@ -841,8 +1002,11 @@ export default function BallFall({ variant }) {
       disposed = true;
       clearInterval(settle);
       clearTimeout(startTimer);
-      glide.stop();
+      glide?.stop();
+      heroGlide.stop();
       if (autoFrame) cancelAnimationFrame(autoFrame);
+      openingObserver?.disconnect();
+      releaseHeroScroll?.();
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("ballrun:paced", relayout);
@@ -855,6 +1019,8 @@ export default function BallFall({ variant }) {
     // and stays invisible until its fall is ready.
     <svg
       ref={svgRef}
+      data-ball-variant={variant}
+      data-ball-mode={VARIANTS[variant]?.mode ?? MODE}
       preserveAspectRatio="none"
       className="pointer-events-none absolute inset-0 z-20 h-full w-full"
       aria-hidden="true"
